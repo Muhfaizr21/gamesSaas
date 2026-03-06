@@ -1,0 +1,151 @@
+
+> frontend@0.1.0 lint
+> eslint
+
+
+C:\laragon\www\topup\frontend\src\app\admin\deposit\page.tsx
+  51:8  warning  React Hook useEffect has a missing dependency: 'fetchDeposits'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\laragon\www\topup\frontend\src\app\admin\kategori\page.tsx
+  41:8  warning  React Hook useEffect has a missing dependency: 'fetchCategories'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\laragon\www\topup\frontend\src\app\admin\layout.tsx
+  21:17  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\laragon\www\topup\frontend\src\app\admin\layout.tsx:21:17
+  19 |                 router.push('/');
+  20 |             } else {
+> 21 |                 setIsAuthorized(true);
+     |                 ^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  22 |             }
+  23 |         }
+  24 |     }, [user, isLoading, isHydrated, router]);  react-hooks/set-state-in-effect
+
+C:\laragon\www\topup\frontend\src\app\admin\page.tsx
+    9:40  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  119:64  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\laragon\www\topup\frontend\src\app\admin\pengaturan\page.tsx
+  82:18  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\laragon\www\topup\frontend\src\app\admin\pesanan\page.tsx
+  46:8  warning  React Hook useEffect has a missing dependency: 'fetchOrders'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\laragon\www\topup\frontend\src\app\admin\users\page.tsx
+   5:18  warning  'Edit' is defined but never used                                                                               @typescript-eslint/no-unused-vars
+  42:8   warning  React Hook useEffect has a missing dependency: 'fetchUsers'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\laragon\www\topup\frontend\src\app\artikel\[slug]\page.tsx
+  11:44  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  54:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\laragon\www\topup\frontend\src\app\artikel\page.tsx
+   74:45  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  105:45  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\laragon\www\topup\frontend\src\app\invoice\[orderId]\page.tsx
+  10:40  error    Unexpected any. Specify a different type                                                                  @typescript-eslint/no-explicit-any
+  39:8   warning  React Hook useEffect has a missing dependency: 'order'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\laragon\www\topup\frontend\src\app\kalkulator\page.tsx
+  41:13  error  'totalWin' is never reassigned. Use 'const' instead         prefer-const
+  44:13  error  'x' is never reassigned. Use 'const' instead                prefer-const
+  46:13  error  'requiredMatches' is never reassigned. Use 'const' instead  prefer-const
+
+C:\laragon\www\topup\frontend\src\app\leaderboard\page.tsx
+  44:33  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  44:33  warning  img elements must have an alt prop, either with meaningful text, or an empty string for decorative images                                                                                                                                                                                jsx-a11y/alt-text
+  60:33  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  60:33  warning  img elements must have an alt prop, either with meaningful text, or an empty string for decorative images                                                                                                                                                                                jsx-a11y/alt-text
+  77:33  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  77:33  warning  img elements must have an alt prop, either with meaningful text, or an empty string for decorative images                                                                                                                                                                                jsx-a11y/alt-text
+  93:55  warning  'index' is defined but never used                                                                                                                                                                                                                                                        @typescript-eslint/no-unused-vars
+  99:37  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\laragon\www\topup\frontend\src\app\login\page.tsx
+  65:18  warning  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\laragon\www\topup\frontend\src\app\register\page.tsx
+  48:18  warning  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\laragon\www\topup\frontend\src\app\topup\[slug]\page.tsx
+   10:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   11:60  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   19:60  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  174:63  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  205:87  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\laragon\www\topup\frontend\src\app\writer\layout.tsx
+  20:17  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\laragon\www\topup\frontend\src\app\writer\layout.tsx:20:17
+  18 |                 router.push('/');
+  19 |             } else {
+> 20 |                 setIsAuthorized(true);
+     |                 ^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  21 |             }
+  22 |         }
+  23 |     }, [user, isLoading, isHydrated, router]);  react-hooks/set-state-in-effect
+
+C:\laragon\www\topup\frontend\src\app\writer\page.tsx
+    6:52  warning  'Search' is defined but never used                                                                                                                                                                                                                                                       @typescript-eslint/no-unused-vars
+    6:60  warning  'ChevronDown' is defined but never used                                                                                                                                                                                                                                                  @typescript-eslint/no-unused-vars
+    6:73  warning  'ChevronUp' is defined but never used                                                                                                                                                                                                                                                    @typescript-eslint/no-unused-vars
+    6:84  warning  'Eye' is defined but never used                                                                                                                                                                                                                                                          @typescript-eslint/no-unused-vars
+    6:89  warning  'CircleDot' is defined but never used                                                                                                                                                                                                                                                    @typescript-eslint/no-unused-vars
+  108:40  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  190:8   warning  React Hook useEffect has a missing dependency: 'form.content'. Either include it or remove the dependency array                                                                                                                                                                          react-hooks/exhaustive-deps
+  195:8   warning  React Hook useEffect has a missing dependency: 'fetchArticles'. Either include it or remove the dependency array                                                                                                                                                                         react-hooks/exhaustive-deps
+  204:8   warning  React Hook useEffect has a missing dependency: 'startCreate'. Either include it or remove the dependency array                                                                                                                                                                           react-hooks/exhaustive-deps
+  230:18  warning  'e' is defined but never used                                                                                                                                                                                                                                                            @typescript-eslint/no-unused-vars
+  420:62  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  518:37  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\laragon\www\topup\frontend\src\components\GameCategories.tsx
+  8:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\laragon\www\topup\frontend\src\components\Navbar.tsx
+    7:52   warning  'AlignJustify' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          @typescript-eslint/no-unused-vars
+   16:52   error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+   17:56   error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+   40:13   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\laragon\www\topup\frontend\src\components\Navbar.tsx:40:13
+  38 |     useEffect(() => {
+  39 |         if (!searchQuery.trim()) {
+> 40 |             setSearchResults([]);
+     |             ^^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  41 |             return;
+  42 |         }
+  43 |         const lowerQuery = searchQuery.toLowerCase();  react-hooks/set-state-in-effect
+   44:49   error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+  132:80   error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   react/no-unescaped-entities
+  132:135  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   react/no-unescaped-entities
+
+C:\laragon\www\topup\frontend\src\components\writer\WriterSidebar.tsx
+  4:29  warning  'BarChart3' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\laragon\www\topup\frontend\src\context\AuthContext.tsx
+  44:8  warning  React Hook useEffect has a missing dependency: 'checkAuth'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+✖ 56 problems (22 errors, 34 warnings)
+  3 errors and 0 warnings potentially fixable with the `--fix` option.
+

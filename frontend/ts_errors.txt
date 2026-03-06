@@ -1,0 +1,2 @@
+src/app/writer/page.tsx(139,29): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/admin/AdminHeader.tsx(22,81): error TS2339: Property 'username' does not exist on type 'User'.

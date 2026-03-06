@@ -1,0 +1,40 @@
+[dotenv@17.3.1] injecting env (11) from .env -- tip: 🛡️ auth for agents: https://vestauth.com
+Database connection has been established successfully.
+=== DETAILED MISMATCH REPORT ===
+
+Total potential mismatches found: 0
+
+=== ALL VOUCHERS LIST ===
+ID: 4 | Name: FREE FIRE
+ID: 12 | Name: MOBILE LEGENDS
+ID: 18 | Name: Genshin Impact
+ID: 51 | Name: Blood Strike
+ID: 52 | Name: Call of Duty MOBILE
+ID: 53 | Name: League of Legends PC
+ID: 56 | Name: ARENA OF VALOR
+ID: 57 | Name: Bleach Soul Resonance
+ID: 58 | Name: Crossfire
+ID: 60 | Name: Dragon City
+ID: 61 | Name: PUBG MOBILE
+ID: 62 | Name: Delta Force
+ID: 65 | Name: GARENA
+ID: 66 | Name: Revelation Infinite Journey
+ID: 67 | Name: Free Fire Max
+ID: 68 | Name: FC Mobile
+ID: 70 | Name: Haikyu Fly High
+ID: 71 | Name: Honor of Kings
+ID: 72 | Name: Honkai Impact 3
+ID: 73 | Name: Honkai Star Rail
+ID: 75 | Name: League of Legends Wild Rift
+ID: 76 | Name: Lords Mobile
+ID: 77 | Name: Magic Chess
+ID: 78 | Name: Mobile Legends Adventure
+ID: 79 | Name: One Punch Man
+ID: 80 | Name: POINT BLANK
+ID: 83 | Name: Pokemon Unite
+ID: 84 | Name: Ragnarok Origin
+ID: 86 | Name: Ragnarok Twilight
+ID: 87 | Name: Sausage Man
+ID: 88 | Name: State of Survival
+ID: 90 | Name: Stumble Guys
+ID: 93 | Name: Valorant
