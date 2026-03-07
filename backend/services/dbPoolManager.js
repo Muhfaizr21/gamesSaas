@@ -3,6 +3,22 @@ const { Sequelize } = require('sequelize');
 // Variabel Cache di memori Node.js
 // Untuk menyimpan koneksi yang sudah terbuka agar tidak membuat koneksi baru tiap request
 const connectionPool = new Map();
+const poolLastUsed = new Map();
+
+// Check for idle DB connections every 15 minutes
+setInterval(() => {
+    const now = Date.now();
+    for (const [dbName, seq] of connectionPool.entries()) {
+        const lastUsed = poolLastUsed.get(dbName) || now;
+        // If not used for 30 minutes (1800000 ms), close and delete from memory
+        if (now - lastUsed > 1800000) {
+            console.log(`[DB Pool Cleanup] Menutup dan menghapus koneksi tenant idle: ${dbName}`);
+            seq.close().catch(e => console.error(e));
+            connectionPool.delete(dbName);
+            poolLastUsed.delete(dbName);
+        }
+    }
+}, 15 * 60 * 1000);
 
 /**
  * Fungsi untuk mengambil atau membuat koneksi database baru untuk tenant tertentu
@@ -12,6 +28,7 @@ const connectionPool = new Map();
 async function getTenantConnection(tenant) {
     // 1. Cek apakah koneksi untuk tenant ini (nama db-nya) sudah ada di RAM (Cache)
     if (connectionPool.has(tenant.dbName)) {
+        poolLastUsed.set(tenant.dbName, Date.now()); // Update lastUsed time
         return connectionPool.get(tenant.dbName);
     }
 
@@ -47,12 +64,14 @@ async function getTenantConnection(tenant) {
         await sequelize.authenticate();
 
         // 4. Tahap Krusial: Inisialisasi Model secara Dinamis 
-        // Mengubah model Singleton lama sehingga terhubung ke `sequelize` instance yang BARU ini
-        // (Akan kita buat file factory `initTenantModels` nanti)
-        require('../models/initTenantModels')(sequelize);
+        // Hanya panggil initTenantModels jika sequelize.models kosong
+        if (Object.keys(sequelize.models).length === 0) {
+            require('../models/initTenantModels')(sequelize);
+        }
 
         // 5. Simpan ke daftar cache
         connectionPool.set(tenant.dbName, sequelize);
+        poolLastUsed.set(tenant.dbName, Date.now());
         return sequelize;
     } catch (error) {
         console.error(`[DB Pool] Gagal terhubung ke database tenant: ${tenant.dbName}`, error);

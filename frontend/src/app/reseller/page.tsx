@@ -1,9 +1,11 @@
+'use client';
 import SaaSNavbar from "@/components/reseller/SaaSNavbar";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import {
     ArrowRight, CheckCircle2, Gamepad2, Globe, Rocket,
     ShieldCheck, Server, Database, BarChart2,
-    Star, Clock, TrendingUp, Layers, Package, Headphones, Quote
+    Star, Clock, TrendingUp, Layers, Package, Headphones, Quote, Loader2
 } from "lucide-react";
 
 const FEATURES = [
@@ -23,30 +25,11 @@ const BASE_PRICES = [
     { game: "Valorant 420 VP", market: "Rp 58.000", modal: "Rp 50.200", profit: "Rp 7.800" },
 ];
 
-const PLANS = [
-    {
-        name: "PRO",
-        price: "99",
-        badge: null,
-        desc: "Untuk pemula yang ingin memulai jualan topup game.",
-        features: ["Subdomain gratis (.samstore.id)", "500 transaksi/bulan", "Payment gateway standar", "Support via tiket", "Dashboard analitik dasar"],
-    },
-    {
-        name: "LEGEND",
-        price: "149",
-        badge: "⚡ Paling Laku",
-        strikethrough: "Rp 299.000",
-        desc: "Paket favorit untuk toko yang sudah berjalan stabil.",
-        features: ["Semua fitur PRO +", "Custom domain pribadi", "Transaksi unlimited", "Markup harga dinamis", "Prioritas WA support", "Auto-broadcast promo"],
-    },
-    {
-        name: "SUPREME",
-        price: "499",
-        badge: null,
-        desc: "Skala enterprise — full white-label & advanced features.",
-        features: ["Semua fitur LEGEND +", "Aplikasi Android eksklusif", "Hapus semua iklan platform", "Private server layer", "Manager akun dedicated", "SLA uptime 99.9%"],
-    },
-];
+const PLAN_HIGHLIGHTS: Record<string, string> = {
+    SUPREME: 'linear-gradient(160deg, #1a0c00 0%, #07071a 60%)',
+    LEGEND: 'linear-gradient(160deg, #05001a 0%, #07071a 60%)',
+    PRO: '#07071a'
+};
 
 const TESTIMONIALS = [
     { name: "Andi Rahmadhan", store: "AndiGaming.com", text: "Omzet Rp 40 juta bulan lalu, hampir semua autopilot. Sistem Legend-nya bener-bener mengubah cara saya jualan. Wajib coba!", rating: 5 },
@@ -55,6 +38,17 @@ const TESTIMONIALS = [
 ];
 
 export default function ResellerPage() {
+    const [plans, setPlans] = useState<any[]>([]);
+    const [plansLoading, setPlansLoading] = useState(true);
+
+    useEffect(() => {
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/master/plans/public`)
+            .then(r => r.ok ? r.json() : [])
+            .then(d => setPlans(Array.isArray(d) ? d : []))
+            .catch(() => setPlans([]))
+            .finally(() => setPlansLoading(false));
+    }, []);
+
     return (
         <div style={{ backgroundColor: '#07071a', color: '#ffffff', fontFamily: 'Inter, system-ui, sans-serif', overflowX: 'hidden' }}>
             <SaaSNavbar />
@@ -200,64 +194,88 @@ export default function ResellerPage() {
                         <h2 style={{ fontSize: 'clamp(28px, 5vw, 48px)', fontWeight: 900, letterSpacing: '-0.03em', marginBottom: 12, lineHeight: 1.1 }}>Bayar Sekali,<br />Keuntungan Selamanya</h2>
                         <p style={{ color: '#94a3b8', maxWidth: 440, margin: '0 auto' }}>0% komisi per transaksi. 100% keuntungan masuk ke saldo Anda.</p>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24, alignItems: 'end' }}>
-                        {PLANS.map((plan, i) => {
-                            const isHighlight = plan.name === 'LEGEND';
-                            return (
-                                <div key={i} style={{
-                                    position: 'relative',
-                                    background: isHighlight ? 'linear-gradient(160deg, #1a1500 0%, #0e0e24 60%)' : '#0e0e24',
-                                    border: isHighlight ? '2px solid rgba(245,200,66,0.5)' : '1px solid rgba(255,255,255,0.07)',
-                                    borderRadius: 28,
-                                    padding: '36px 28px',
-                                    boxShadow: isHighlight ? '0 0 60px rgba(245,200,66,0.1)' : 'none',
-                                    transform: isHighlight ? 'translateY(-8px)' : 'none',
-                                }}>
-                                    {plan.badge && (
-                                        <div style={{ position: 'absolute', top: -16, left: '50%', transform: 'translateX(-50%)', background: '#f5c842', color: '#07071a', fontSize: 12, fontWeight: 900, padding: '6px 16px', borderRadius: 999, whiteSpace: 'nowrap', boxShadow: '0 0 20px rgba(245,200,66,0.5)' }}>
-                                            {plan.badge}
+                    {plansLoading ? (
+                        <div style={{ textAlign: 'center', padding: '60px 0', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+                            <Loader2 style={{ width: 20, height: 20, animation: 'spin 1s linear infinite' }} /> Memuat paket terbaru...
+                        </div>
+                    ) : (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24, alignItems: 'end' }}>
+                            {plans.map((plan, i) => {
+                                const name = plan.name?.toUpperCase();
+                                const isHighlight = name === 'LEGEND';
+                                const isSupreme = name === 'SUPREME';
+                                const badge = plan.badge || null;
+                                const desc = plan.description || '';
+                                const bg = PLAN_HIGHLIGHTS[name] || '#0e0e24';
+                                const borderColor = isSupreme ? 'rgba(251,191,36,0.5)' : isHighlight ? 'rgba(96,165,250,0.5)' : 'rgba(255,255,255,0.07)';
+                                const priceMonthly = Math.round(Number(plan.price) || 0);
+                                const priceYearly = priceMonthly * 12;
+                                const originalPriceYearly = Number(plan.originalPrice) || priceYearly * 2;
+                                const features = Array.isArray(plan.features) ? plan.features : [];
+                                return (
+                                    <div key={plan.id || i} style={{
+                                        position: 'relative',
+                                        background: bg,
+                                        border: `2px solid ${borderColor}`,
+                                        borderRadius: 28,
+                                        padding: '40px 28px 32px',
+                                        boxShadow: isHighlight ? '0 0 60px rgba(96,165,250,0.08)' : isSupreme ? '0 0 60px rgba(251,191,36,0.08)' : 'none',
+                                        transform: isHighlight ? 'translateY(-8px)' : 'none',
+                                    }}>
+                                        {badge && (
+                                            <div style={{ position: 'absolute', top: -16, left: '50%', transform: 'translateX(-50%)', background: isSupreme ? '#f59e0b' : isHighlight ? '#3b82f6' : '#10b981', color: '#fff', fontSize: 11, fontWeight: 900, padding: '6px 16px', borderRadius: 999, whiteSpace: 'nowrap' }}>
+                                                {badge}
+                                            </div>
+                                        )}
+                                        <h3 style={{ fontSize: 22, fontWeight: 900, color: isSupreme ? '#fcd34d' : isHighlight ? '#93c5fd' : '#ffffff', marginBottom: 6 }}>{plan.name}</h3>
+                                        <p style={{ fontSize: 13, color: '#64748b', marginBottom: 20, lineHeight: 1.5 }}>{desc}</p>
+                                        <div style={{ marginBottom: 8 }}>
+                                            <span style={{ fontSize: 13, color: '#475569', textDecoration: 'line-through' }}>
+                                                Rp {Number(originalPriceYearly).toLocaleString('id-ID')} /tahun
+                                            </span>
                                         </div>
-                                    )}
-                                    <h3 style={{ fontSize: 18, fontWeight: 900, color: isHighlight ? '#f5c842' : '#ffffff', marginBottom: 8 }}>{plan.name}</h3>
-                                    <p style={{ fontSize: 13, color: '#64748b', marginBottom: 24, lineHeight: 1.5 }}>{plan.desc}</p>
-                                    {plan.strikethrough && <p style={{ fontSize: 13, color: '#475569', textDecoration: 'line-through', marginBottom: 4 }}>{plan.strikethrough}</p>}
-                                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, marginBottom: 28 }}>
-                                        <span style={{ fontSize: 42, fontWeight: 900, color: '#ffffff', lineHeight: 1 }}>Rp {plan.price}k</span>
-                                        <span style={{ fontSize: 14, color: '#64748b', paddingBottom: 4 }}>/bln</span>
+                                        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, marginBottom: 4 }}>
+                                            <span style={{ fontSize: 38, fontWeight: 900, color: '#ffffff', lineHeight: 1 }}>Rp {priceYearly.toLocaleString('id-ID')}</span>
+                                        </div>
+                                        <p style={{ fontSize: 13, color: '#64748b', marginBottom: 24 }}>setara Rp {priceMonthly.toLocaleString('id-ID')} / bulan</p>
+                                        <div style={{ height: 1, background: 'rgba(255,255,255,0.07)', marginBottom: 20 }} />
+                                        <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 24px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                            {features.map((f: string, fi: number) => {
+                                                const isCrossed = f.startsWith('x ') || f.startsWith('X ');
+                                                const cleanText = isCrossed ? f.substring(2) : f;
+                                                return (
+                                                    <li key={fi} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 13, opacity: isCrossed ? 0.4 : 1 }}>
+                                                        {isCrossed ? (
+                                                            <div style={{ width: 15, height: 15, marginTop: 2, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                <div style={{ width: 10, height: 2, background: '#ef4444', transform: 'rotate(45deg)', position: 'absolute' }} />
+                                                                <div style={{ width: 10, height: 2, background: '#ef4444', transform: 'rotate(-45deg)', position: 'absolute' }} />
+                                                            </div>
+                                                        ) : (
+                                                            <CheckCircle2 style={{ width: 15, height: 15, marginTop: 2, flexShrink: 0, color: isSupreme ? '#fbbf24' : isHighlight ? '#60a5fa' : '#34d399' }} />
+                                                        )}
+                                                        <span style={{ color: isCrossed ? '#64748b' : '#94a3b8', textDecoration: isCrossed ? 'line-through' : 'none' }}>{cleanText}</span>
+                                                    </li>
+                                                );
+                                            })}
+                                        </ul>
+                                        <Link
+                                            href={`/reseller/register?plan=${plan.name.toLowerCase()}`}
+                                            style={{
+                                                display: 'block', width: '100%', textAlign: 'center',
+                                                padding: '14px 24px', borderRadius: 16, fontWeight: 900,
+                                                fontSize: 14, textDecoration: 'none', boxSizing: 'border-box',
+                                                background: isSupreme ? '#f59e0b' : isHighlight ? '#3b82f6' : 'transparent',
+                                                color: (isHighlight || isSupreme) ? '#fff' : '#ffffff',
+                                                border: (isHighlight || isSupreme) ? 'none' : '1px solid rgba(255,255,255,0.12)',
+                                            }}
+                                        >
+                                            Daftar Sekarang
+                                        </Link>
                                     </div>
-                                    <div style={{ height: 1, background: 'rgba(255,255,255,0.07)', marginBottom: 24 }} />
-                                    <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 28px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-                                        {plan.features.map((f, fi) => (
-                                            <li key={fi} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 14 }}>
-                                                <CheckCircle2 style={{ width: 16, height: 16, marginTop: 2, flexShrink: 0, color: isHighlight ? '#f5c842' : '#475569' }} />
-                                                <span style={{ color: isHighlight ? '#cbd5e1' : '#94a3b8' }}>{f}</span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                    <Link
-                                        href={`/reseller/register?plan=${plan.name.toLowerCase()}`}
-                                        style={{
-                                            display: 'block',
-                                            width: '100%',
-                                            textAlign: 'center',
-                                            padding: '14px 24px',
-                                            borderRadius: 16,
-                                            fontWeight: 800,
-                                            fontSize: 14,
-                                            textDecoration: 'none',
-                                            boxSizing: 'border-box',
-                                            background: isHighlight ? '#f5c842' : 'transparent',
-                                            color: isHighlight ? '#07071a' : '#ffffff',
-                                            border: isHighlight ? 'none' : '1px solid rgba(255,255,255,0.12)',
-                                            transition: 'all 0.2s',
-                                        }}
-                                    >
-                                        Mulai Paket {plan.name}
-                                    </Link>
-                                </div>
-                            );
-                        })}
-                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
             </section>
 

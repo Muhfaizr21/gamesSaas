@@ -31,9 +31,10 @@ router.post('/upload/voucher', upload.single('image'), uploadController.uploadVo
 
 // --- Promo Codes (Manual) ---
 const promoCodeController = require('../controllers/promoCodeController');
+const requireFeature = require('../middlewares/requireFeature');
 router.get('/promo-codes', promoCodeController.getAllCouponControls);
-router.post('/promo-codes', promoCodeController.createCoupon);
-router.put('/promo-codes/:id', promoCodeController.updateCoupon);
+router.post('/promo-codes', requireFeature('Manajemen Kupon Diskon'), promoCodeController.createCoupon);
+router.put('/promo-codes/:id', requireFeature('Manajemen Kupon Diskon'), promoCodeController.updateCoupon);
 router.delete('/promo-codes/:id', promoCodeController.deleteCoupon);
 
 // --- Spin to Win Prizes (Admin) ---
@@ -61,9 +62,9 @@ router.put('/orders/:id/status', adminController.updateOrderStatus);
 
 // -- Promos (Flash Sale) --
 router.get('/promos', promoController.getAllPromos);
-router.post('/promos', promoController.createPromo);
-router.put('/promos/:id', promoController.updatePromo);
-router.delete('/promos/:id', promoController.deletePromo);
+router.post('/promos', requireFeature('Fitur Flash Sale'), promoController.createPromo);
+router.put('/promos/:id', requireFeature('Fitur Flash Sale'), promoController.updatePromo);
+router.delete('/promos/:id', requireFeature('Fitur Flash Sale'), promoController.deletePromo);
 router.post('/upload/promo', upload.single('image'), uploadController.uploadPromoBanner);
 
 // -- Reviews (Testimoni) --
@@ -78,7 +79,7 @@ router.put('/users/:id/role', adminController.updateUserRole);
 
 // -- Settings --
 router.put('/settings/theme', async (req, res) => {
-        const { User, Category, Voucher, Product, Order, Deposit, Article, Setting, BankAccount, Review, Promo, PromoCode, SpinPrize, SavingPot, SavingTransaction } = req.db.models;
+    const { User, Category, Voucher, Product, Order, Deposit, Article, Setting, BankAccount, Review, Promo, PromoCode, SpinPrize, SavingPot, SavingTransaction } = req.db.models;
     try {
         const { theme } = req.body;
         if (!theme) return res.status(400).json({ message: 'Theme is required' });
@@ -100,7 +101,7 @@ router.put('/settings/theme', async (req, res) => {
 });
 
 router.get('/settings/whatsapp', async (req, res) => {
-        const { User, Category, Voucher, Product, Order, Deposit, Article, Setting, BankAccount, Review, Promo, PromoCode, SpinPrize, SavingPot, SavingTransaction } = req.db.models;
+    const { User, Category, Voucher, Product, Order, Deposit, Article, Setting, BankAccount, Review, Promo, PromoCode, SpinPrize, SavingPot, SavingTransaction } = req.db.models;
     try {
         const tokenSetting = await Setting.findOne({ where: { key: 'fonnte_token' } });
         res.json({ token: tokenSetting ? tokenSetting.value : '' });
@@ -110,7 +111,7 @@ router.get('/settings/whatsapp', async (req, res) => {
 });
 
 router.put('/settings/whatsapp', async (req, res) => {
-        const { User, Category, Voucher, Product, Order, Deposit, Article, Setting, BankAccount, Review, Promo, PromoCode, SpinPrize, SavingPot, SavingTransaction } = req.db.models;
+    const { User, Category, Voucher, Product, Order, Deposit, Article, Setting, BankAccount, Review, Promo, PromoCode, SpinPrize, SavingPot, SavingTransaction } = req.db.models;
     try {
         const { token } = req.body;
         let tokenSetting = await Setting.findOne({ where: { key: 'fonnte_token' } });
@@ -134,5 +135,10 @@ router.put('/finance/pots/allocation', financeController.updateAllocation);
 router.post('/finance/pots/:id/withdraw', financeController.addWithdrawal);
 router.get('/finance/pots/:id/history', financeController.getSavingHistory);
 router.post('/finance/recalculate', financeController.recalculate);
+
+// ─── Reseller Deposit ──────────────────────────────
+const depositController = require('../controllers/resellerDepositController');
+router.get('/finance/deposit-requests', depositController.getTenantDeposits);
+router.post('/finance/deposit-requests', depositController.requestDeposit);
 
 module.exports = router;

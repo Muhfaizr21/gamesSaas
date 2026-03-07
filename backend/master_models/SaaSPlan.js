@@ -20,6 +20,18 @@ const SaaSPlan = masterSequelize.define('SaaSPlan', {
         type: DataTypes.INTEGER,
         defaultValue: 30, // 30 days / month
     },
+    description: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    originalPrice: {
+        type: DataTypes.DECIMAL(15, 2),
+        allowNull: true
+    },
+    badge: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
     features: {
         type: DataTypes.TEXT, // Store JSON string array of features
         allowNull: true

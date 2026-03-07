@@ -115,9 +115,10 @@ export function AdminSidebar() {
                     </NavGroup>
 
                     {/* Transaksi & Keuangan Group */}
-                    <NavGroup title="Transaksi" icon={Wallet} activePrefixes={['/admin/pesanan', '/admin/deposit', '/admin/keuangan']} currentPath={pathname}>
+                    <NavGroup title="Transaksi" icon={Wallet} activePrefixes={['/admin/pesanan', '/admin/deposit', '/admin/keuangan', '/admin/deposit-reseller']} currentPath={pathname}>
                         <NavItem href="/admin/pesanan" icon={ShoppingCart} label="Pesanan" currentPath={pathname} />
-                        <NavItem href="/admin/deposit" icon={Wallet} label="Deposit Saldo" currentPath={pathname} />
+                        <NavItem href="/admin/deposit" icon={Wallet} label="M-Banking (User)" currentPath={pathname} />
+                        <NavItem href="/admin/deposit-reseller" icon={CreditCard} label="Topup Saldo Toko" currentPath={pathname} />
                         <NavItem href="/admin/keuangan" icon={BarChart2} label="Lap. Keuangan" currentPath={pathname} />
                     </NavGroup>
 

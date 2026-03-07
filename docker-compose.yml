@@ -17,6 +17,10 @@ services:
       - DB_NAME=topup_db
     env_file:
       - ./backend/.env
+    volumes:
+      - ./backend:/app
+      - /app/node_modules # prevent local node_modules from overriding container's
+    command: npm run dev
     restart: always
 
   frontend:

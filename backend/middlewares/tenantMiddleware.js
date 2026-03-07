@@ -1,6 +1,10 @@
 const Tenant = require('../master_models/Tenant');
 const TenantConfig = require('../master_models/TenantConfig');
+const SaaSPlan = require('../master_models/SaaSPlan');
 const { getTenantConnection } = require('../services/dbPoolManager');
+
+// Memory Cache untuk menyimpan data Tenant (mengurangi query ke DB Master tiap request)
+const tenantCache = new Map();
 
 const tenantMiddleware = async (req, res, next) => {
     try {
@@ -17,11 +21,29 @@ const tenantMiddleware = async (req, res, next) => {
             }
         }
 
-        // Cari data tenant di Database Master
-        const tenant = await Tenant.findOne({
-            where: { subdomain: tenantSubdomain },
-            include: [{ model: TenantConfig }]
-        });
+        let tenant = null;
+        let cached = tenantCache.get(tenantSubdomain);
+
+        // Cache valid selama 1 menit (60000ms) untuk optimisasi latency ekstrim
+        if (cached && (Date.now() - cached.timestamp < 60000)) {
+            tenant = cached.data;
+        } else {
+            // Cari data tenant di Database Master jika tidak ada di cache / expired
+            tenant = await Tenant.findOne({
+                where: { subdomain: tenantSubdomain },
+                include: [
+                    { model: TenantConfig },
+                    { model: SaaSPlan, as: 'plan' }
+                ]
+            });
+
+            if (tenant) {
+                tenantCache.set(tenantSubdomain, {
+                    data: tenant,
+                    timestamp: Date.now()
+                });
+            }
+        }
 
         if (!tenant) {
             return res.status(404).json({ message: `Toko dengan subdomain '${tenantSubdomain}' tidak ditemukan.` });
@@ -43,10 +65,25 @@ const tenantMiddleware = async (req, res, next) => {
         // Panggil Pool Manager untuk mendapatkan sambungan "Pribadi" milik tenant ini.
         const dbConn = await getTenantConnection(tenant);
 
+        // Parse Plan Features to Array
+        let allowedFeatures = [];
+        if (tenant.plan && tenant.plan.features) {
+            try {
+                const parsed = JSON.parse(tenant.plan.features);
+                if (Array.isArray(parsed)) {
+                    // Filter out crossed features (those starting with "x " or "X ")
+                    allowedFeatures = parsed.filter(f => !f.toLowerCase().startsWith('x '));
+                }
+            } catch (e) {
+                console.error('[Tenant Middleware] Gagal parse JSON features', e);
+            }
+        }
+
         // Pasangkan (Attach) Objek-Objek Ini Ke Dalam Request
         // Supaya bisa diakses di Controllers (req.tenant, req.tenantConfig, req.db)
         req.tenant = tenant;
         req.tenantConfig = tenant.TenantConfig; // Berisi rahasia: digiflazzUsername & Key
+        req.tenantFeatures = allowedFeatures; // Daftar string fitur yang nyala
         req.db = dbConn;
 
         next(); // Teruskan perjalanan request ke Endpoint selanjutnya (Routes)

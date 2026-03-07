@@ -43,6 +43,12 @@ router.post('/tenants/:id/balance', authSuperAdmin, ctrl.updateTenantBalance);
 router.put('/tenants/:id/plan', authSuperAdmin, ctrl.updateTenantPlan);
 router.delete('/tenants/:id', authSuperAdmin, ctrl.deleteTenant);
 
+// ── Reseller Deposits (Self Service Bank Transfer) ────────────────────────────
+const depositCtrl = require('../controllers/resellerDepositController');
+router.get('/deposits', authSuperAdmin, depositCtrl.getAllDepositRequests);
+router.post('/deposits/:id/approve', authSuperAdmin, depositCtrl.approveDeposit);
+router.post('/deposits/:id/reject', authSuperAdmin, depositCtrl.rejectDeposit);
+
 // ── SaaS Configuration & Tools ────────────────────────────────────────────────
 const settingsCtrl = require('../controllers/superAdminSettingsController');
 
@@ -54,6 +60,7 @@ router.put('/settings/:key', authSuperAdmin, settingsCtrl.updateSetting);
 router.get('/plans', authSuperAdmin, settingsCtrl.getPlans);
 router.post('/plans', authSuperAdmin, settingsCtrl.createPlan);
 router.put('/plans/:id', authSuperAdmin, settingsCtrl.updatePlan);
+router.delete('/plans/:id', authSuperAdmin, settingsCtrl.deletePlan);
 
 // Domain Requests
 router.get('/domains', authSuperAdmin, settingsCtrl.getDomainRequests);

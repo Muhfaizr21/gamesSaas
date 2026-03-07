@@ -51,9 +51,9 @@ module.exports = {
 
     createPlan: async (req, res) => {
         try {
-            const { name, price, durationDays, features } = req.body;
+            const { name, price, durationDays, features, badge, originalPrice, description } = req.body;
             const plan = await SaaSPlan.create({
-                name, price, durationDays, features: JSON.stringify(features || [])
+                name, price, durationDays, badge, originalPrice, description, features: JSON.stringify(features || [])
             });
             res.status(201).json({ message: 'Plan dibuat', plan });
         } catch (err) {
@@ -64,20 +64,37 @@ module.exports = {
     updatePlan: async (req, res) => {
         try {
             const { id } = req.params;
-            const { name, price, durationDays, features, isActive } = req.body;
+            const { name, price, durationDays, features, isActive, badge, originalPrice, description } = req.body;
             const plan = await SaaSPlan.findByPk(id);
             if (!plan) return res.status(404).json({ message: 'Plan tidak ditemukan' });
 
             if (name) plan.name = name;
-            if (price) plan.price = price;
+            if (price !== undefined) plan.price = price;
+            if (originalPrice !== undefined) plan.originalPrice = originalPrice;
+            if (badge !== undefined) plan.badge = badge;
+            if (description !== undefined) plan.description = description;
             if (durationDays) plan.durationDays = durationDays;
             if (features) plan.features = JSON.stringify(features);
             if (typeof isActive !== 'undefined') plan.isActive = isActive;
 
             await plan.save();
-            res.json({ message: 'Plan diupdate', plan });
+            const pd = plan.toJSON();
+            try { pd.features = JSON.parse(pd.features); } catch (e) { }
+            res.json({ message: 'Plan diupdate', plan: pd });
         } catch (err) {
             res.status(500).json({ message: 'Gagal update plan', error: err.message });
+        }
+    },
+
+    deletePlan: async (req, res) => {
+        try {
+            const { id } = req.params;
+            const plan = await SaaSPlan.findByPk(id);
+            if (!plan) return res.status(404).json({ message: 'Plan tidak ditemukan' });
+            await plan.destroy();
+            res.json({ message: `Plan '${plan.name}' berhasil dihapus.` });
+        } catch (err) {
+            res.status(500).json({ message: 'Gagal hapus plan', error: err.message });
         }
     },
 

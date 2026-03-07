@@ -30,9 +30,10 @@ function initCronJobs() {
                 await tenant.save();
                 console.log(`[CRON] Tenant ${tenant.subdomain} telah di-suspend karena masa aktif berakhir.`);
 
-                // TODO: Kirim notifikasi WA ke nomor admin reseller jika ada.
-                // Karena struktur table Tenant kita belum punya adminWhatsapp di level Master, kita harus nge-hook ke DB tenant-nya, atau simpan admin WA di Tenant model master.
-                // Untuk MVP, console log cukup:
+                if (tenant.adminWhatsapp) {
+                    const message = `PEMBERITAHUAN PENTING 🚨\n\nHalo Admin Toko *${tenant.name}*,\n\nMasa aktif paket langganan toko Anda telah *berakhir*. Saat ini toko Anda telah *dinonaktifkan sementara* (suspended).\n\nSilakan hubungi Super Admin untuk memperpanjang langganan dan mengaktifkan kembali toko Anda.\n\nTerima kasih,\nTim SAMSaaS`;
+                    whatsappService.sendMessage(tenant.adminWhatsapp, message);
+                }
             }
 
         } catch (error) {

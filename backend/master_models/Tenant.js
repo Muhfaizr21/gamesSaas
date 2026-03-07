@@ -39,6 +39,18 @@ const Tenant = masterSequelize.define('Tenant', {
         allowNull: true,
         defaultValue: 'root'
     },
+    adminName: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
+    adminEmail: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
+    adminWhatsapp: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
     status: {
         type: DataTypes.ENUM('active', 'suspended', 'trial'),
         defaultValue: 'active',
@@ -65,6 +77,7 @@ const Tenant = masterSequelize.define('Tenant', {
 });
 
 const SaaSPlan = require('./SaaSPlan');
+const TenantDepositRequest = require('./TenantDepositRequest');
 
 // Relasi 1-to-1: 1 Tenant punya 1 Config Rahasia (API Keys)
 Tenant.hasOne(TenantConfig, { foreignKey: 'tenantId' });
@@ -72,5 +85,9 @@ TenantConfig.belongsTo(Tenant, { foreignKey: 'tenantId' });
 
 // Relasi ke SaaS Plan
 Tenant.belongsTo(SaaSPlan, { foreignKey: 'planId', as: 'plan' });
+
+// Relasi Deposit
+Tenant.hasMany(TenantDepositRequest, { foreignKey: 'tenantId', as: 'depositRequests' });
+TenantDepositRequest.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'tenant' });
 
 module.exports = Tenant;
