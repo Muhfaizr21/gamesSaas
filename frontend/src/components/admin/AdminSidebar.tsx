@@ -56,8 +56,8 @@ const NavGroup = ({ title, icon: Icon, children, activePrefixes, currentPath }: 
     );
 };
 
-const NavItem = ({ href, icon: Icon, label, currentPath }: any) => {
-    const isActive = currentPath === href || currentPath.startsWith(`${href}/`);
+const NavItem = ({ href, icon: Icon, label, currentPath, exact = false }: any) => {
+    const isActive = exact ? currentPath === href : (currentPath === href || currentPath.startsWith(`${href}/`));
     return (
         <Link
             href={href}
@@ -131,7 +131,7 @@ export function AdminSidebar() {
 
                     {/* Manajemen Reseller (Superadmin) */}
                     <NavGroup title="Reseller Hub (SaaS)" icon={Store} activePrefixes={['/admin/tenants']} currentPath={pathname}>
-                        <NavItem href="/admin/tenants" icon={Store} label="Daftar Toko" currentPath={pathname} />
+                        <NavItem href="/admin/tenants" icon={Store} label="Daftar Toko" currentPath={pathname} exact />
                         <NavItem href="/admin/tenants/deposit" icon={CreditCard} label="Deposit Reseller" currentPath={pathname} />
                         <NavItem href="/admin/tenants/domains" icon={Globe} label="Custom Domain" currentPath={pathname} />
                         <NavItem href="/admin/tenants/plans" icon={ListVideo} label="Paket Langganan" currentPath={pathname} />

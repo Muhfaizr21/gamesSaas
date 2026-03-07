@@ -112,7 +112,7 @@ export default function ResellerPage() {
                 <div style={{ maxWidth: 800, margin: '0 auto', textAlign: 'center' }}>
                     <p style={{ fontSize: 11, fontWeight: 700, color: '#475569', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 16 }}>Terhubung dengan provider resmi</p>
                     <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: '24px 40px' }}>
-                        {['DIGIFLAZZ', 'MOONTON', 'RIOT GAMES', 'STEAM', 'PRISMALINK'].map(b => (
+                        {['DIGIFLAZZ', 'MOONTON', 'RIOT GAMES', 'STEAM', 'TRIPAY'].map(b => (
                             <span key={b} style={{ fontSize: 13, fontWeight: 900, color: '#475569', letterSpacing: '0.08em' }}>{b}</span>
                         ))}
                     </div>

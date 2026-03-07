@@ -1,20 +1,25 @@
-const { SavingPot, SavingTransaction, Order, Product } = require('../models');
 const { Op } = require('sequelize');
 
 // ─────────────────────────────────────────────
 // UTILITY: Split profit to all 3 saving pots
+// MULTI-TENANT: Perlu di-pass db dari req.db agar pakai database tenant yang benar
 // ─────────────────────────────────────────────
-async function distributeProfitToSavings(profit, orderId, invoiceNumber) {
+async function distributeProfitToSavings(profit, orderId, invoiceNumber, db) {
     if (profit <= 0) return;
+
+    // Gunakan db yang di-pass (tenant-specific), fallback ke require('../models') hanya jika tidak ada
+    const { SavingPot, SavingTransaction } = db ? db.models : require('../models');
+
     const pots = await SavingPot.findAll();
     if (pots.length === 0) return;
 
     const totalAlloc = pots.reduce((sum, p) => sum + parseFloat(p.allocation_percent), 0);
+    if (totalAlloc === 0) return;
 
     for (const pot of pots) {
         // Calculate share proportionally even if % doesn't sum to exactly 100
         const share = (parseFloat(pot.allocation_percent) / totalAlloc) * profit;
-        const rounded = Math.floor(share * 100) / 100; // Floor to 2 decimals, no rounding up
+        const rounded = Math.floor(share * 100) / 100; // Floor to 2 decimals
 
         await SavingTransaction.create({
             saving_pot_id: pot.id,
@@ -35,6 +40,7 @@ module.exports.distributeProfitToSavings = distributeProfitToSavings;
 // GET /api/admin/finance/report
 // ─────────────────────────────────────────────
 exports.getReport = async (req, res) => {
+    const { Order, Product } = req.db.models;
     try {
         const { period = 'all' } = req.query;
 
@@ -62,7 +68,7 @@ exports.getReport = async (req, res) => {
             };
         }
 
-        // Fetch all successful orders in period
+        // Fetch all successful orders in period (dari tenant's own DB)
         const orders = await Order.findAll({
             where: {
                 payment_status: 'Paid',
@@ -131,6 +137,7 @@ exports.getReport = async (req, res) => {
 // GET /api/admin/finance/pots
 // ─────────────────────────────────────────────
 exports.getSavingPots = async (req, res) => {
+    const { SavingPot } = req.db.models;
     try {
         const pots = await SavingPot.findAll({ order: [['id', 'ASC']] });
         res.json(pots);
@@ -144,6 +151,7 @@ exports.getSavingPots = async (req, res) => {
 // Body: { allocations: [{ id, allocation_percent }] }
 // ─────────────────────────────────────────────
 exports.updateAllocation = async (req, res) => {
+    const { SavingPot } = req.db.models;
     try {
         const { allocations } = req.body;
         if (!Array.isArray(allocations) || allocations.length === 0) {
@@ -175,6 +183,7 @@ exports.updateAllocation = async (req, res) => {
 // Body: { amount, description }
 // ─────────────────────────────────────────────
 exports.addWithdrawal = async (req, res) => {
+    const { SavingPot, SavingTransaction } = req.db.models;
     try {
         const { id } = req.params;
         const { amount, description } = req.body;
@@ -215,6 +224,7 @@ exports.addWithdrawal = async (req, res) => {
 // GET /api/admin/finance/pots/:id/history
 // ─────────────────────────────────────────────
 exports.getSavingHistory = async (req, res) => {
+    const { SavingTransaction } = req.db.models;
     try {
         const { id } = req.params;
         const transactions = await SavingTransaction.findAll({
@@ -233,12 +243,13 @@ exports.getSavingHistory = async (req, res) => {
 // Resets all pot balances and re-calculates from all successful orders
 // ─────────────────────────────────────────────
 exports.recalculate = async (req, res) => {
+    const { SavingPot, SavingTransaction, Order, Product } = req.db.models;
     try {
         // 1. Reset semua saldo dan hapus semua income transactions
         await SavingTransaction.destroy({ where: { type: 'income' } });
         await SavingPot.update({ balance: 0 }, { where: {} });
 
-        // 2. Fetch all successful orders
+        // 2. Fetch all successful orders dari tenant ini
         const orders = await Order.findAll({
             where: { payment_status: 'Paid', order_status: 'Success' },
             include: [{ model: Product, attributes: ['price_buy'] }],
@@ -252,7 +263,7 @@ exports.recalculate = async (req, res) => {
             const fee = parseFloat(order.fee || 0);
             const profit = revenue - modal - fee;
 
-            await distributeProfitToSavings(profit, order.id, order.invoice_number);
+            await distributeProfitToSavings(profit, order.id, order.invoice_number, req.db);
             distributed++;
         }
 

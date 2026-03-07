@@ -21,6 +21,12 @@ const adminMiddleware = async (req, res, next) => {
             return res.status(401).json({ message: 'User not found.' });
         }
 
+        // Security: Ensure token's subdomain matches current tenant
+        const currentSubdomain = req.tenant?.subdomain || 'budi';
+        if (!decoded.isSuperAdmin && decoded.subdomain !== currentSubdomain) {
+            return res.status(401).json({ message: 'Token is for a different store. Please login again.' });
+        }
+
         if (user.role !== 'admin') {
             return res.status(403).json({ message: 'Access denied. You do not have admin privileges.' });
         }

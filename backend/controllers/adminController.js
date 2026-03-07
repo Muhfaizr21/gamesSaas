@@ -433,7 +433,7 @@ const adminController = {
                 offset: parseInt(offset),
                 include: [{
                     model: Product,
-                    attributes: ['name', 'sku']
+                    attributes: ['id', 'name', 'sku']
                 }, {
                     model: User,
                     attributes: ['id', 'name', 'whatsapp'],
@@ -460,15 +460,43 @@ const adminController = {
             const prevStatus = order.order_status;
             await order.update({ payment_status, order_status });
 
-            // Trigger profit distribution if status changes TO Success
+            // Trigger SaaS balance deduction if manual success (and not already deducted)
+            let hargaModal = 0;
             if (order_status === 'Success' && prevStatus !== 'Success') {
+                // Deduct balance from tenant (master database)
+                hargaModal = parseFloat(order.Product?.price_buy || 0);
+                if (hargaModal > 0 && req.tenant) {
+                    const currentBalance = parseFloat(req.tenant.balance || 0);
+                    if (currentBalance >= hargaModal) {
+                        req.tenant.balance = currentBalance - hargaModal;
+                        await req.tenant.save();
+                        // Invalidate cache agar saldo fresh di request selanjutnya
+                        const { invalidateTenantCache } = require('../middlewares/tenantMiddleware');
+                        invalidateTenantCache(req.tenant.subdomain);
+
+                        // Log balance deduction
+                        const TenantBalanceLog = require('../master_models/TenantBalanceLog');
+                        await TenantBalanceLog.create({
+                            tenantId: req.tenant.id,
+                            type: 'topup_deduct',
+                            amount: hargaModal,
+                            balanceBefore: currentBalance,
+                            balanceAfter: req.tenant.balance,
+                            note: `Manual Success: Deduct untuk order ${order.invoice_number}`,
+                            orderId: order.invoice_number
+                        });
+                    } else {
+                        console.warn(`[Warning] Manual Success for ${order.invoice_number} but tenant balance insufficient! Saldo: ${currentBalance}, Butuh: ${hargaModal}`);
+                    }
+                }
+
+                // Trigger profit distribution (pass req.db untuk multi-tenant finance)
                 const financeController = require('./financeController');
                 const revenue = parseFloat(order.price || 0);
-                const modal = parseFloat(order.Product?.price_buy || 0);
                 const fee = parseFloat(order.fee || 0);
-                const profit = revenue - modal - fee;
+                const profit = revenue - hargaModal - fee;
 
-                await financeController.distributeProfitToSavings(profit, order.id, order.invoice_number);
+                await financeController.distributeProfitToSavings(profit, order.id, order.invoice_number, req.db);
             }
 
             res.json(order);

@@ -79,8 +79,8 @@ export default function TopupDetail({ params }: { params: Promise<{ slug: string
 
     const handleCheckout = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!userId.trim()) return alert('Masukkan User ID tujuan!');
-        if (!zoneId.trim()) return alert('Masukkan Zone ID / Server!');
+        if (!userId.trim()) return alert('Masukkan User ID / No. akun tujuan!');
+        if (voucher?.requiresZoneId !== false && !zoneId.trim()) return alert('Masukkan Zone ID / Server!');
         if (!whatsapp.trim()) return alert('Masukkan nomor WhatsApp!');
         if (!selectedProduct) return alert('Pilih nominal topup terlebih dahulu!');
         if (!selectedPayment) return alert('Pilih metode pembayaran!');
@@ -173,27 +173,35 @@ export default function TopupDetail({ params }: { params: Promise<{ slug: string
                                 <div className="bg-primary text-black font-black w-8 h-8 rounded-full flex items-center justify-center">1</div>
                                 <h2 className="text-xl font-bold text-foreground">Masukkan Data Tujuan</h2>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className={`grid grid-cols-1 gap-4 ${(voucher as any).requiresZoneId !== false ? 'md:grid-cols-2' : ''}`}>
                                 <div>
-                                    <label className="block text-sm font-semibold text-muted-foreground mb-2">User ID *</label>
+                                    <label className="block text-sm font-semibold text-muted-foreground mb-2">
+                                        {(voucher as any).requiresZoneId === false ? 'No. Akun / Email / User ID *' : 'User ID *'}
+                                    </label>
                                     <input
                                         type="text" required
-                                        placeholder="Ketik User ID"
+                                        placeholder={(voucher as any).requiresZoneId === false ? 'Ketik No. Akun / Email' : 'Ketik User ID'}
                                         value={userId} onChange={(e) => setUserId(e.target.value)}
                                         className="w-full bg-[#1a1a1a] border border-[#333] rounded-xl py-3 px-4 text-foreground focus:outline-none focus:border-primary transition-colors"
                                     />
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-semibold text-muted-foreground mb-2">Zone ID / Server *</label>
-                                    <input
-                                        type="text" required
-                                        placeholder="Zone ID"
-                                        value={zoneId} onChange={(e) => setZoneId(e.target.value)}
-                                        className="w-full bg-[#1a1a1a] border border-[#333] rounded-xl py-3 px-4 text-foreground focus:outline-none focus:border-primary transition-colors"
-                                    />
-                                </div>
+                                {(voucher as any).requiresZoneId !== false && (
+                                    <div>
+                                        <label className="block text-sm font-semibold text-muted-foreground mb-2">Zone ID / Server *</label>
+                                        <input
+                                            type="text"
+                                            placeholder="Zone ID"
+                                            value={zoneId} onChange={(e) => setZoneId(e.target.value)}
+                                            className="w-full bg-[#1a1a1a] border border-[#333] rounded-xl py-3 px-4 text-foreground focus:outline-none focus:border-primary transition-colors"
+                                        />
+                                    </div>
+                                )}
                             </div>
-                            <p className="mt-3 text-xs text-muted-foreground">Petunjuk: Untuk mengetahui User ID & Zone ID, silakan masuk ke profil game Anda.</p>
+                            <p className="mt-3 text-xs text-muted-foreground">
+                                {(voucher as any).requiresZoneId === false
+                                    ? 'Masukkan No. Akun / Email sesuai akun yang terdaftar di platform.'
+                                    : 'Petunjuk: Untuk mengetahui User ID & Zone ID, silakan masuk ke profil game Anda.'}
+                            </p>
                         </div>
 
                         {/* Box 2: Nominal */}
@@ -273,7 +281,7 @@ export default function TopupDetail({ params }: { params: Promise<{ slug: string
                                                             {/* fee mock */}
                                                         </div>
                                                         <div className="w-16 h-8 relative opacity-80">
-                                                            {/* PrismaLink gives icon_url or we mapped it */}
+                                                            {/* Tripay gives icon_url or we mapped it */}
                                                             {channel.icon_url && (
                                                                 <Image src={channel.icon_url} alt={channel.name} fill className="object-contain" />
                                                             )}
@@ -285,7 +293,7 @@ export default function TopupDetail({ params }: { params: Promise<{ slug: string
                                     ))
                                 ) : (
                                     <div className="bg-[#1a1a1a] border border-[#333] rounded-xl p-4 text-center">
-                                        <p className="text-muted-foreground text-sm">Metode pembayaran belum dikonfigurasi. Pastikan PRISMALINK_SECRET_KEY valid.</p>
+                                        <p className="text-muted-foreground text-sm">Metode pembayaran belum dikonfigurasi. Pastikan TRIPAY_API_KEY valid.</p>
                                     </div>
                                 )}
                             </div>

@@ -7,8 +7,36 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Middleware
-app.use(cors());
+// ── CORS: Whitelist domain resmi saja, tolak yang lain ──────────────────────
+const allowedOrigins = [
+  process.env.FRONTEND_URL || 'http://localhost:3000',
+  'http://budi.localhost:3000',
+  /^https?:\/\/([\w-]+\.)?localhost(:\d+)?$/,  // izinkan semua subdomain di localhost
+  /^https?:\/\/([\w-]+\.)?samstore\.id$/, // izinkan semua subdomain samstore.id
+];
+app.use(cors({
+  origin: (origin, callback) => {
+    // Debug: Log origin agar terlihat di terminal backend
+    if (origin) console.log(`[CORS Request] From Origin: ${origin}`);
+
+    // izinkan tools seperti Postman / curl (origin = undefined) hanya di non-production
+    if (!origin && process.env.NODE_ENV !== 'production') return callback(null, true);
+
+    // Periksa apakah origin mengandung 'localhost' atau '127.0.0.1'
+    const isLocal = origin.includes('localhost') || origin.includes('127.0.0.1');
+    const isSamstore = /\.samstore\.id$/.test(origin) || origin === 'https://samstore.id';
+
+    if (isLocal || isSamstore || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    console.error(`[CORS REJECTED] Origin: ${origin}`);
+    callback(new Error(`CORS: Origin '${origin}' tidak diizinkan.`));
+  },
+  credentials: true,
+  optionsSuccessStatus: 200
+}));
+
 app.use(express.json());
 const path = require('path');
 app.use(express.urlencoded({ extended: true }));

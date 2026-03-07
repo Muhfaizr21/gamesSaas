@@ -1,6 +1,7 @@
 // Removed global models require
 const { Op } = require('sequelize');
 const whatsappService = require('../services/whatsappService');
+const { invalidateTenantCache } = require('../middlewares/tenantMiddleware');
 // Demo payment channels - ditampilkan jika PrismaLink belum dikonfigurasi / sandbox mode
 const DEMO_CHANNELS = [
     { group: 'Virtual Account', code: '014', name: 'BCA Virtual Account', icon_url: 'https://upload.wikimedia.org/wikipedia/commons/5/5c/Bank_Central_Asia.svg', active: true },
@@ -13,8 +14,8 @@ const DEMO_CHANNELS = [
 ];
 
 const isDemoMode = (req) => {
-    const key = req?.tenantConfig?.prismalinkSecretKey || process.env.PRISMALINK_SECRET_KEY;
-    return !key || key === 'your_prismalink_secret_key' || key.length < 10;
+    const key = req?.tenantConfig?.tripayApiKey || process.env.TRIPAY_API_KEY;
+    return !key || key.length < 10;
 };
 
 exports.getPaymentChannels = async (req, res, next) => {
@@ -22,9 +23,14 @@ exports.getPaymentChannels = async (req, res, next) => {
         if (isDemoMode(req)) {
             return res.json(DEMO_CHANNELS);
         }
-        const PrismalinkService = require('../services/prismalinkService');
-        const prismalinkService = new PrismalinkService(req.tenantConfig?.prismalinkMerchantId, req.tenantConfig?.prismalinkSecretKey);
-        const channels = await prismalinkService.getPaymentChannels();
+        const TripayService = require('../services/tripayService');
+        const merchantCode = req.tenantConfig?.tripayMerchantCode || process.env.TRIPAY_MERCHANT_CODE;
+        const apiKey = req.tenantConfig?.tripayApiKey || process.env.TRIPAY_API_KEY;
+        const privateKey = req.tenantConfig?.tripayPrivateKey || process.env.TRIPAY_PRIVATE_KEY;
+        const isProduction = process.env.NODE_ENV === 'production';
+        const tripayService = new TripayService(merchantCode, apiKey, privateKey, isProduction);
+
+        const channels = await tripayService.getPaymentChannels();
         res.json(channels.data || DEMO_CHANNELS);
     } catch (error) {
         next(error);
@@ -37,10 +43,40 @@ exports.createOrder = async (req, res, next) => {
         const { productId, customerId, zoneId, paymentMethod, customerName, whatsappNumber, usePoints, promoCode } = req.body;
         const userId = req.user?.id || null;
 
+        // ── Input Validation ─────────────────────────────────────────────────
+        if (!productId) return res.status(400).json({ message: 'productId wajib diisi.' });
+        if (!customerId || String(customerId).trim() === '') return res.status(400).json({ message: 'Customer ID (User ID Game) wajib diisi.' });
+        if (!paymentMethod) return res.status(400).json({ message: 'Metode pembayaran wajib dipilih.' });
+        if (!whatsappNumber || String(whatsappNumber).trim() === '') return res.status(400).json({ message: 'Nomor WhatsApp wajib diisi.' });
+        // ─────────────────────────────────────────────────────────────────────
+
         const product = await Product.findByPk(productId, { include: Voucher });
         if (!product || !product.isActive) {
             return res.status(404).json({ message: 'Produk tidak ditemukan atau tidak aktif' });
         }
+
+        // ── Duplicate Order Protection (Idempotency) ──────────────────────────
+        // Cek apakah ada order PENDING/PROCESSING untuk user + produk + target yang sama dalam 5 menit terakhir
+        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+        const duplicateOrder = await Order.findOne({
+            where: {
+                productId: parseInt(productId),
+                customer_id: String(customerId).trim(),
+                order_status: { [Op.in]: ['Pending', 'Processing'] },
+                created_at: { [Op.gte]: fiveMinutesAgo }
+            }
+        });
+        if (duplicateOrder) {
+            console.warn(`[Idempotency] Duplicate order blocked for product ${productId} + customer ${customerId}`);
+            return res.status(409).json({
+                message: 'Pesanan yang sama sedang diproses. Silakan tunggu atau cek halaman invoice Anda.',
+                invoice_number: duplicateOrder.invoice_number,
+                payment_url: duplicateOrder.payment_url || null,
+                success: false,
+                isDuplicate: true
+            });
+        }
+        // ─────────────────────────────────────────────────────────────────────
 
         const fee = 1000;
         let price = Number(product.price_sell);
@@ -151,37 +187,41 @@ exports.createOrder = async (req, res, next) => {
             });
         }
 
-        // Production Mode: request ke PrismaLink
-        const prismalinkParams = {
+        // Production Mode: request ke Tripay
+        const tripayParams = {
             method: paymentMethod,
             merchant_ref: invoiceNumber,
             amount: totalAmount,
             customer_name: customerName || 'Guest User',
-            customer_email: 'guest@samstore.com',
+            customer_email: 'guest@samstore.id',
             customer_phone: whatsappNumber || '081234567890',
             product_name: `${product.Voucher?.name} - ${product.name}`,
             sku: product.sku,
-            return_url: `http://localhost:3000/invoice/${invoiceNumber}`
+            return_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/invoice/${invoiceNumber}`
         };
 
-        const PrismalinkService = require('../services/prismalinkService');
-        const prismalinkService = new PrismalinkService(req.tenantConfig?.prismalinkMerchantId, req.tenantConfig?.prismalinkSecretKey);
-        const prismalinkResponse = await prismalinkService.createClosedPayment(prismalinkParams);
+        const TripayService = require('../services/tripayService');
+        const merchantCode = req.tenantConfig?.tripayMerchantCode || process.env.TRIPAY_MERCHANT_CODE;
+        const apiKey = req.tenantConfig?.tripayApiKey || process.env.TRIPAY_API_KEY;
+        const privateKey = req.tenantConfig?.tripayPrivateKey || process.env.TRIPAY_PRIVATE_KEY;
+        const isProduction = process.env.NODE_ENV === 'production';
+        const tripayService = new TripayService(merchantCode, apiKey, privateKey, isProduction);
+        const tripayResponse = await tripayService.createClosedPayment(tripayParams);
 
-        if (prismalinkResponse && prismalinkResponse.success) {
+        if (tripayResponse && tripayResponse.success) {
             await order.update({
-                payment_url: prismalinkResponse.data.checkout_url,
-                gateway_reference: prismalinkResponse.data.reference
+                payment_url: tripayResponse.data.checkout_url,
+                gateway_reference: tripayResponse.data.reference
             });
 
             res.status(201).json({
                 success: true,
                 invoice_number: invoiceNumber,
-                checkout_url: prismalinkResponse.data.checkout_url
+                checkout_url: tripayResponse.data.checkout_url
             });
         } else {
             await order.destroy();
-            res.status(400).json({ message: 'Gagal membuat pembayaran PrismaLink', detail: prismalinkResponse });
+            res.status(400).json({ message: 'Gagal membuat tagihan pembayaran.', detail: tripayResponse });
         }
 
     } catch (error) {
@@ -189,12 +229,16 @@ exports.createOrder = async (req, res, next) => {
     }
 };
 
-exports.prismalinkCallback = async (req, res, next) => {
+exports.tripayCallback = async (req, res, next) => {
     try {
         const { Order, Product, User } = req.db.models;
-        const PrismalinkService = require('../services/prismalinkService');
-        const prismalinkService = new PrismalinkService(req.tenantConfig?.prismalinkMerchantId, req.tenantConfig?.prismalinkSecretKey);
-        const isValid = prismalinkService.verifyCallbackSignature(req);
+        const TripayService = require('../services/tripayService');
+        const merchantCode = req.tenantConfig?.tripayMerchantCode || process.env.TRIPAY_MERCHANT_CODE;
+        const apiKey = req.tenantConfig?.tripayApiKey || process.env.TRIPAY_API_KEY;
+        const privateKey = req.tenantConfig?.tripayPrivateKey || process.env.TRIPAY_PRIVATE_KEY;
+        const isProduction = process.env.NODE_ENV === 'production';
+        const tripayService = new TripayService(merchantCode, apiKey, privateKey, isProduction);
+        const isValid = tripayService.verifyCallbackSignature(req);
         if (!isValid) return res.status(400).json({ success: false, message: 'Invalid signature' });
 
         const data = req.body;
@@ -225,6 +269,8 @@ exports.prismalinkCallback = async (req, res, next) => {
                 // Potong saldo
                 req.tenant.balance = currentBalance - hargaModal;
                 await req.tenant.save();
+                // BUG FIX #3: Invalidate cache agar request berikutnya baca saldo fresh dari DB Master
+                invalidateTenantCache(req.tenant.subdomain);
 
                 // Catat mutasi
                 const TenantBalanceLog = require('../master_models/TenantBalanceLog');
@@ -240,7 +286,6 @@ exports.prismalinkCallback = async (req, res, next) => {
                 // -----------------------------------------------
 
                 const { DigiflazzService } = require('../services/digiflazzService');
-                // Menggunakan akun SuperAdmin PUSAT dari env (atau PlatformSetting)
                 const dfService = new DigiflazzService(
                     process.env.DIGIFLAZZ_USERNAME,
                     process.env.DIGIFLAZZ_KEY
@@ -255,25 +300,35 @@ exports.prismalinkCallback = async (req, res, next) => {
                     providerName: 'digiflazz',
                     eventType: 'topup_result',
                     payload: JSON.stringify(digiRes),
-                    status: (digiRes.status === 'Sukses' ? 'success' : 'pending'),
+                    status: (digiRes.status === 'Sukses' ? 'success' : digiRes.status === 'Gagal' ? 'failed' : 'pending'),
                     errorMessage: digiRes.message || null
                 });
 
+                // Map Digiflazz status to our ENUM ('Pending', 'Processing', 'Success', 'Failed')
+                let finalOrderStatus = 'Processing';
+                if (digiRes.status === 'Sukses') finalOrderStatus = 'Success';
+                else if (digiRes.status === 'Gagal') finalOrderStatus = 'Failed';
+                else if (digiRes.status === 'Pending') finalOrderStatus = 'Processing';
+
                 await order.update({
-                    order_status: 'Success',
-                    provider_order_id: digiRes.ref_id
+                    order_status: finalOrderStatus,
+                    provider_order_id: digiRes.ref_id,
+                    sn: digiRes.sn || null
                 });
 
-                // --- Financial Report & Saving Pots ---
-                try {
-                    const financeController = require('./financeController');
-                    const revenue = parseFloat(order.price || 0);
-                    const modal = parseFloat(order.Product?.price_buy || 0);
-                    const fee = parseFloat(order.fee || 0);
-                    const profit = revenue - modal - fee;
-                    await financeController.distributeProfitToSavings(profit, order.id, order.invoice_number);
-                } catch (finErr) {
-                    console.error("Finance Profit Split failed:", finErr);
+                // --- Financial Report (Only if immediate success) ---
+                if (finalOrderStatus === 'Success') {
+                    try {
+                        const financeController = require('./financeController');
+                        const revenue = parseFloat(order.price || 0);
+                        const modal = parseFloat(order.Product?.price_buy || 0);
+                        const fee = parseFloat(order.fee || 0);
+                        const profit = revenue - modal - fee;
+                        // BUG FIX #2: Pass req.db agar profit masuk ke SavingPot tenant yang benar
+                        await financeController.distributeProfitToSavings(profit, order.id, order.invoice_number, req.db);
+                    } catch (finErr) {
+                        console.error("Finance Profit Split failed:", finErr);
+                    }
                 }
                 // --------------------------------------
 
@@ -283,7 +338,8 @@ exports.prismalinkCallback = async (req, res, next) => {
                         await User.increment('points', { by: order.points_earned, where: { id: order.userId } });
                     }
 
-                    const { Setting } = require('../models');
+                    // BUG FIX: Gunakan req.db.models.Setting bukan global require('../models')
+                    const { Setting } = req.db.models;
                     let gachaSetting = await Setting.findOne({ where: { key: 'gacha_min_transaction' } });
                     const minTransaction = gachaSetting ? parseInt(gachaSetting.value) : 50000;
 
@@ -316,6 +372,8 @@ exports.prismalinkCallback = async (req, res, next) => {
                         const currentBalance = parseFloat(req.tenant.balance || 0);
                         req.tenant.balance = currentBalance + hargaModal;
                         await req.tenant.save();
+                        // BUG FIX #3: Invalidate cache setelah refund juga
+                        invalidateTenantCache(req.tenant.subdomain);
 
                         const TenantBalanceLog = require('../master_models/TenantBalanceLog');
                         await TenantBalanceLog.create({
@@ -446,15 +504,14 @@ exports.digiflazzWebhook = async (req, res, next) => {
                 sn: data.sn || null
             });
 
-            // --- Trigger Profit Savings ---
-            const prevStatus = order.order_status;
-            if (prevStatus !== 'Success') {
+            // --- Trigger Profit Savings (pass dbConn for multi-tenant) ---
+            if (order.order_status !== 'Success') {
                 const financeController = require('./financeController');
                 const revenue = parseFloat(order.price || 0);
                 const modal = parseFloat(order.Product?.price_buy || 0);
                 const fee = parseFloat(order.fee || 0);
                 const profit = revenue - modal - fee;
-                await financeController.distributeProfitToSavings(profit, order.id, order.invoice_number);
+                await financeController.distributeProfitToSavings(profit, order.id, order.invoice_number, dbConn);
             }
             // -------------------------------
 
@@ -473,6 +530,9 @@ exports.digiflazzWebhook = async (req, res, next) => {
                     const currentBalance = parseFloat(tenant.balance || 0);
                     tenant.balance = currentBalance + hargaModal;
                     await tenant.save();
+                    // Invalidate cache setelah refund dari webhook
+                    const { invalidateTenantCache } = require('../middlewares/tenantMiddleware');
+                    invalidateTenantCache(tenant.subdomain);
 
                     const TenantBalanceLog = require('../master_models/TenantBalanceLog');
                     await TenantBalanceLog.create({
@@ -502,5 +562,124 @@ exports.digiflazzWebhook = async (req, res, next) => {
     } catch (error) {
         console.error('[DigiFlazz Webhook] Error:', error);
         res.status(500).json({ message: 'Internal Server Error' });
+    }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/admin/orders/:id/check-provider
+// Manual Cek Status Order ke Digiflazz (untuk order yang STUCK di Processing)
+// Hanya bisa dipanggil oleh Admin Tenant
+// ─────────────────────────────────────────────────────────────────────────────
+exports.manualCheckDigiflazz = async (req, res, next) => {
+    try {
+        const { Order, Product } = req.db.models;
+        const { id } = req.params;
+
+        const order = await Order.findByPk(id, {
+            include: [{ model: Product, attributes: ['price_buy', 'name', 'sku'] }]
+        });
+
+        if (!order) return res.status(404).json({ message: 'Order tidak ditemukan.' });
+
+        if (order.order_status === 'Success' || order.order_status === 'Failed') {
+            return res.json({
+                message: `Order sudah final dengan status: ${order.order_status}. Tidak perlu dicek ulang.`,
+                order_status: order.order_status
+            });
+        }
+
+        if (!order.provider_order_id) {
+            return res.status(400).json({ message: 'Order belum memiliki ref_id provider. Mungkin belum diproses ke Digiflazz.' });
+        }
+
+        // Cek status ke Digiflazz
+        const axios = require('axios');
+        const md5 = require('md5');
+        const username = process.env.DIGIFLAZZ_USERNAME;
+        const key = process.env.DIGIFLAZZ_KEY;
+        const sign = md5(username + key + 'status');
+
+        const dfRes = await axios.post('https://api.digiflazz.com/v1/transaction', {
+            commands: 'inq-pasca',
+            username,
+            ref_id: order.provider_order_id,
+            sign
+        });
+
+        const digiData = dfRes.data?.data;
+        if (!digiData) {
+            return res.status(502).json({ message: 'Gagal mengambil status dari Digiflazz.' });
+        }
+
+        const digiStatus = digiData.status;
+        let newOrderStatus = order.order_status; // default tidak berubah
+
+        if (digiStatus === 'Sukses' && order.order_status !== 'Success') {
+            newOrderStatus = 'Success';
+            await order.update({ order_status: 'Success', sn: digiData.sn || order.sn });
+
+            // Distribusikan profit setelah konfirmasi sukses
+            try {
+                const financeController = require('./financeController');
+                const revenue = parseFloat(order.price || 0);
+                const modal = parseFloat(order.Product?.price_buy || 0);
+                const fee = parseFloat(order.fee || 0);
+                const profit = revenue - modal - fee;
+                await financeController.distributeProfitToSavings(profit, order.id, order.invoice_number, req.db);
+            } catch (finErr) {
+                console.error('[ManualCheck] Finance split error:', finErr.message);
+            }
+
+            if (order.whatsapp_number) {
+                whatsappService.sendMessage(order.whatsapp_number,
+                    `Halo,\n\nPesanan Anda *${order.Product?.name}* (Invoice: *${order.invoice_number}*) telah SUKSES!\nSN: ${digiData.sn || '-'}\nTerima kasih!`
+                );
+            }
+
+        } else if (digiStatus === 'Gagal' && order.order_status !== 'Failed') {
+            newOrderStatus = 'Failed';
+            await order.update({ order_status: 'Failed' });
+
+            // Refund saldo tenant
+            const hargaModal = parseFloat(order.Product?.price_buy || 0);
+            if (hargaModal > 0 && req.tenant) {
+                const currentBalance = parseFloat(req.tenant.balance || 0);
+                req.tenant.balance = currentBalance + hargaModal;
+                await req.tenant.save();
+                const { invalidateTenantCache } = require('../middlewares/tenantMiddleware');
+                invalidateTenantCache(req.tenant.subdomain);
+
+                const TenantBalanceLog = require('../master_models/TenantBalanceLog');
+                await TenantBalanceLog.create({
+                    tenantId: req.tenant.id,
+                    type: 'refund',
+                    amount: hargaModal,
+                    balanceBefore: currentBalance,
+                    balanceAfter: req.tenant.balance,
+                    note: `Refund manual check - order gagal ${order.invoice_number}`,
+                    orderId: order.invoice_number
+                });
+            }
+
+            if (order.whatsapp_number) {
+                whatsappService.sendMessage(order.whatsapp_number,
+                    `Halo,\n\nPesanan Anda *${order.Product?.name}* (Invoice: *${order.invoice_number}*) GAGAL. Silakan hubungi Admin.`
+                );
+            }
+        }
+
+        res.json({
+            success: true,
+            message: newOrderStatus !== order.order_status
+                ? `Status berhasil diperbarui ke ${newOrderStatus}.`
+                : `Status dari Digiflazz: ${digiStatus}. Tidak ada perubahan.`,
+            digiflazz_status: digiStatus,
+            order_status: newOrderStatus,
+            sn: digiData.sn || null,
+            rc: digiData.rc || null
+        });
+    } catch (error) {
+        console.error('[ManualCheck Digiflazz] Error:', error.response?.data || error.message);
+        res.status(500).json({ message: 'Gagal cek status ke provider.', error: error.response?.data?.message || error.message });
     }
 };

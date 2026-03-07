@@ -14,11 +14,15 @@ const TenantConfig = masterSequelize.define('TenantConfig', {
         type: DataTypes.STRING,
         allowNull: true,
     },
-    prismalinkMerchantId: {
+    tripayMerchantCode: {
         type: DataTypes.STRING,
         allowNull: true,
     },
-    prismalinkSecretKey: {
+    tripayApiKey: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
+    tripayPrivateKey: {
         type: DataTypes.STRING,
         allowNull: true,
     },

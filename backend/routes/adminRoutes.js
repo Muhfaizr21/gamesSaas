@@ -59,6 +59,7 @@ router.delete('/products/:id', adminController.deleteProduct);
 // -- Orders --
 router.get('/orders', adminController.getAllOrders);
 router.put('/orders/:id/status', adminController.updateOrderStatus);
+router.post('/orders/:id/check-provider', require('../controllers/checkoutController').manualCheckDigiflazz);
 
 // -- Promos (Flash Sale) --
 router.get('/promos', promoController.getAllPromos);

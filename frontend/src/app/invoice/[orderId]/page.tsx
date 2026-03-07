@@ -28,15 +28,16 @@ export default function InvoicePage({ params }: { params: Promise<{ orderId: str
 
         fetchOrder();
 
-        // Polling status per 10 detik jika belum lunas
+        // Polling status per 10 detik jika belum lunas atau sedang diproses provider
         const interval = setInterval(() => {
-            if (order && order.payment_status === 'Unpaid') {
-                fetchOrder();
+            if (order) {
+                const needsPoll = order.payment_status === 'Unpaid' || order.order_status === 'Processing' || order.order_status === 'Pending';
+                if (needsPoll) fetchOrder();
             }
         }, 10000);
 
         return () => clearInterval(interval);
-    }, [orderId, order?.payment_status, router]);
+    }, [orderId, order?.payment_status, order?.order_status, router]);
 
     if (loading) {
         return (
@@ -70,9 +71,15 @@ export default function InvoicePage({ params }: { params: Promise<{ orderId: str
                             isSuccess ? (
                                 <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4 flex items-center gap-4">
                                     <div className="w-12 h-12 bg-green-500/20 text-green-500 flex items-center justify-center rounded-full text-2xl">✓</div>
-                                    <div>
+                                    <div className="flex-1">
                                         <h3 className="font-bold text-green-500">Transaksi Berhasil!</h3>
                                         <p className="text-sm text-green-500/80 mt-1">Sistem kami telah berhasil mengirimkan pesanan ke ID tujuan Anda.</p>
+                                        {order.sn && (
+                                            <div className="mt-2 pt-2 border-t border-green-500/20">
+                                                <p className="text-[10px] text-green-500/60 uppercase tracking-widest font-bold">Serial Number / SN</p>
+                                                <p className="text-lg font-mono font-black text-green-400 break-all">{order.sn}</p>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             ) : (
@@ -88,8 +95,8 @@ export default function InvoicePage({ params }: { params: Promise<{ orderId: str
                             <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 flex items-center gap-4">
                                 <div className="w-12 h-12 bg-red-500/20 text-red-500 flex items-center justify-center rounded-full text-2xl">✕</div>
                                 <div>
-                                    <h3 className="font-bold text-red-500">Transaksi Dibatalkan / Gagal</h3>
-                                    <p className="text-sm text-red-500/80 mt-1">Waktu pembayaran telah habis atau pesanan dibatalkan sistem.</p>
+                                    <h3 className="font-bold text-red-500">Transaksi Gagal</h3>
+                                    <p className="text-sm text-red-500/80 mt-1">Pesanan gagal diproses atau dibatalkan sistem. Silakan hubungi admin.</p>
                                 </div>
                             </div>
                         ) : (
@@ -160,7 +167,7 @@ export default function InvoicePage({ params }: { params: Promise<{ orderId: str
                                         <span className="font-semibold text-foreground">Rp {Number(order.price).toLocaleString('id-ID')}</span>
                                     </div>
                                     <div className="flex justify-between items-center border-b border-[#333] pb-3">
-                                        <span className="text-muted-foreground text-sm">Biaya Admin (Payment Gateway)</span>
+                                        <span className="text-muted-foreground text-sm">Biaya Admin</span>
                                         <span className="font-semibold text-foreground">Rp {Number(order.fee).toLocaleString('id-ID')}</span>
                                     </div>
                                     <div className="flex justify-between items-center pt-2">

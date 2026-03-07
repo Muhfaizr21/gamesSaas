@@ -19,7 +19,15 @@ exports.protect = (req, res, next) => {
             decoded = jwt.verify(token, process.env.SUPERADMIN_JWT_SECRET || 'superadmin-jwt-very-secret-2026');
         }
 
-        req.user = decoded; // { id, role }
+        req.user = decoded; // { id, role, subdomain }
+
+        // Security: Ensure token's subdomain matches current tenant
+        // Exception for SuperAdmins who can access all tenants
+        const currentSubdomain = req.tenant?.subdomain || 'budi';
+        if (!decoded.isSuperAdmin && decoded.subdomain !== currentSubdomain) {
+            return res.status(401).json({ message: 'Token is for a different store. Please login again.' });
+        }
+
         next();
     } catch (error) {
         console.error('Auth Middleware Error:', error);

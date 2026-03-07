@@ -28,6 +28,11 @@ module.exports = (sequelize, DataTypes) => {
         isActive: {
             type: DataTypes.BOOLEAN,
             defaultValue: true,
+        },
+        requiresZoneId: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: true,
+            comment: 'Apakah produk ini membutuhkan Zone ID / Server? False untuk produk seperti Google Play, Netflix, dll.'
         }
     }, {
         timestamps: true,

@@ -35,7 +35,11 @@ exports.register = async (req, res) => {
 
         // Generate token
         const token = jwt.sign(
-            { id: newUser.id, role: newUser.role },
+            {
+                id: newUser.id,
+                role: newUser.role,
+                subdomain: req.tenant?.subdomain || 'budi'
+            },
             process.env.JWT_SECRET || 'fallback_secret_key',
             { expiresIn: '7d' }
         );
@@ -63,6 +67,7 @@ exports.login = async (req, res) => {
     const { User, Order, Deposit, Product, Voucher, Review } = req.db.models;
     try {
         const { email, whatsapp, password } = req.body;
+        console.log(`[AUTH] Login attempt for: ${email || whatsapp} on tenant: ${req.tenant?.subdomain}`);
 
         if ((!email && !whatsapp) || !password) {
             return res.status(400).json({ message: 'Please provide email/whatsapp and password.' });
@@ -85,7 +90,11 @@ exports.login = async (req, res) => {
 
         // Generate token
         let secret = process.env.JWT_SECRET || 'fallback_secret_key';
-        let payload = { id: user.id, role: user.role };
+        let payload = {
+            id: user.id,
+            role: user.role,
+            subdomain: req.tenant?.subdomain || 'budi'
+        };
 
         let isSuperAdminTenant = false;
         if (req.tenant) {

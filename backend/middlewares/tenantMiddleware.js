@@ -4,7 +4,19 @@ const SaaSPlan = require('../master_models/SaaSPlan');
 const { getTenantConnection } = require('../services/dbPoolManager');
 
 // Memory Cache untuk menyimpan data Tenant (mengurangi query ke DB Master tiap request)
+// Di-export agar module lain (checkout, updateOrderStatus) bisa invalidate setelah balance berubah
 const tenantCache = new Map();
+
+/**
+ * Hapus cache untuk tenant tertentu agar next request ambil data fresh dari DB Master.
+ * WAJIB dipanggil setelah saldo tenant berubah (deduct/topup).
+ */
+function invalidateTenantCache(subdomain) {
+    if (subdomain && tenantCache.has(subdomain)) {
+        tenantCache.delete(subdomain);
+        console.log(`[Tenant Cache] Cache invalidated untuk: ${subdomain}`);
+    }
+}
 
 const tenantMiddleware = async (req, res, next) => {
     try {
@@ -94,3 +106,4 @@ const tenantMiddleware = async (req, res, next) => {
 };
 
 module.exports = tenantMiddleware;
+module.exports.invalidateTenantCache = invalidateTenantCache;

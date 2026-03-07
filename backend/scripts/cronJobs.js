@@ -13,7 +13,9 @@ function initCronJobs() {
             // Cari tenant active yang subscriptionExpiresAt nya sudah lewat
             const expiredTenants = await Tenant.findAll({
                 where: {
-                    status: 'active',
+                    status: {
+                        [Op.in]: ['active', 'trial']
+                    },
                     subscriptionExpiresAt: {
                         [Op.lt]: now
                     }

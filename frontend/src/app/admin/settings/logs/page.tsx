@@ -9,7 +9,7 @@ export default function ProviderLogsPage() {
     // Mock webhooks
     const [logs] = useState([
         { id: '1', provider: 'Digiflazz', event: 'status_update', timestamp: '2026-03-07 14:15:00', status: 'success', payload: '{"data": {"trx_id": "DG123", "status": "Sukses", "sn": "123456789"}}' },
-        { id: '2', provider: 'Prismalink', event: 'payment_paid', timestamp: '2026-03-07 14:10:00', status: 'success', payload: '{"merchantToken": "abc...", "status": "00", "referenceId": "INV-001"}' },
+        { id: '2', provider: 'Tripay', event: 'payment_paid', timestamp: '2026-03-07 14:10:00', status: 'success', payload: '{"merchant_ref": "INV-001", "status": "PAID", "reference": "T123"}' },
         { id: '3', provider: 'Digiflazz', event: 'status_update', timestamp: '2026-03-07 14:05:00', status: 'failed', payload: '{"data": {"trx_id": "DG122", "status": "Gagal", "message": "Nomor tujuan salah"}}', error: 'User invalid' },
         { id: '4', provider: 'Digiflazz', event: 'status_update', timestamp: '2026-03-07 14:00:00', status: 'invalid_signature', payload: '{"data":{...}}', error: 'Signature mismatch' },
     ]);
