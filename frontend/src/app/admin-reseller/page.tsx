@@ -66,7 +66,7 @@ export default function ResellerDashboardPage() {
             </div>
 
             {/* Stat Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 lg:gap-6">
                 <div className="bg-[#0A0A0A] border border-[#1a1a1a] p-6 rounded-2xl relative overflow-hidden group">
                     <div className="flex justify-between items-start mb-4">
                         <div>
@@ -106,13 +106,27 @@ export default function ResellerDashboardPage() {
                 <div className="bg-[#0f172a] border border-blue-900/50 p-6 rounded-2xl relative overflow-hidden group">
                     <div className="flex justify-between items-start mb-4">
                         <div>
-                            <p className="text-xs font-bold text-blue-400 uppercase tracking-wider mb-1 text-shadow-sm">Sisa Saldo Provider</p>
+                            <p className="text-xs font-bold text-blue-400 uppercase tracking-wider mb-1 text-shadow-sm">Dagang Point</p>
                             <h3 className="text-xl md:text-2xl font-black text-white drop-shadow-md">
-                                {stats?.digiflazzBalance !== undefined ? formatCurrency(stats.digiflazzBalance) : 'Rp0,00'}
+                                {stats?.dagangPoint !== undefined ? formatCurrency(stats.dagangPoint) : 'Rp0,00'}
                             </h3>
                         </div>
                         <div className="p-3 bg-blue-500/20 rounded-xl text-blue-400 border border-blue-500/30">
                             <Wallet className="h-6 w-6" />
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-[#1f2937] border border-green-900/50 p-6 rounded-2xl relative overflow-hidden group">
+                    <div className="flex justify-between items-start mb-4">
+                        <div>
+                            <p className="text-xs font-bold text-green-400 uppercase tracking-wider mb-1 text-shadow-sm">Dagang Cash (Cuan)</p>
+                            <h3 className="text-xl md:text-2xl font-black text-white drop-shadow-md">
+                                {stats?.dagangCash !== undefined ? formatCurrency(stats.dagangCash) : 'Rp0,00'}
+                            </h3>
+                        </div>
+                        <div className="p-3 bg-green-500/20 rounded-xl text-green-400 border border-green-500/30">
+                            <DollarSign className="h-6 w-6" />
                         </div>
                     </div>
                 </div>

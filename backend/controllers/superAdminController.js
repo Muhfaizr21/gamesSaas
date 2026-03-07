@@ -39,7 +39,10 @@ module.exports = {
     listTenants: async (req, res) => {
         try {
             const tenants = await Tenant.findAll({
-                include: [{ model: TenantConfig, attributes: ['digiflazzUsername', 'markupPercent'] }],
+                include: [
+                    { model: TenantConfig, attributes: ['digiflazzUsername', 'markupPercent'] },
+                    { model: SaaSPlan, as: 'plan', attributes: ['name'] }
+                ],
                 order: [['created_at', 'DESC']]
             });
             res.json(tenants);

@@ -59,7 +59,14 @@ const Tenant = masterSequelize.define('Tenant', {
         type: DataTypes.DECIMAL(15, 2),
         allowNull: false,
         defaultValue: 0,
-        comment: 'Saldo deposit reseller yang mengendap di superadmin'
+        comment: 'Saldo deposit reseller (Dagang Point) yang mengendap di superadmin'
+    },
+    dagangCash: {
+        type: DataTypes.DECIMAL(15, 2),
+        allowNull: false,
+        defaultValue: 0,
+        field: 'dagang_cash',
+        comment: 'Keuntungan bersih reseller yang bisa di-withdraw akhir minggu'
     },
     planId: {
         type: DataTypes.UUID,

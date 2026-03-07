@@ -17,6 +17,11 @@ const TenantBalanceLog = masterSequelize.define('TenantBalanceLog', {
         allowNull: false,
         comment: 'Tipe mutasi saldo'
     },
+    balance_type: {
+        type: DataTypes.ENUM('point', 'cash'),
+        defaultValue: 'point',
+        allowNull: false,
+    },
     amount: {
         type: DataTypes.DECIMAL(15, 2),
         allowNull: false,

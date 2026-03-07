@@ -88,11 +88,11 @@ export default function ResellerRegisterPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[#07071a] flex items-center justify-center p-4 py-24">
-            <div className="max-w-[1000px] w-full grid grid-cols-1 md:grid-cols-5 bg-[#0e0e24] rounded-3xl overflow-hidden border border-white/5 shadow-2xl relative z-10">
+        <div className="min-h-screen bg-[#07071a] flex items-center justify-center p-4 py-8 lg:py-24">
+            <div className="max-w-[1100px] w-full grid grid-cols-1 lg:grid-cols-5 bg-[#0e0e24] rounded-3xl overflow-hidden border border-white/5 shadow-2xl relative z-10">
 
                 {/* Bagian Kiri: Info */}
-                <div className="md:col-span-2 bg-[#141432] p-8 lg:p-12 border-r border-white/5 flex flex-col justify-between">
+                <div className="lg:col-span-2 bg-[#141432] p-8 lg:p-12 border-b lg:border-b-0 lg:border-r border-white/5 flex flex-col justify-between">
                     <div>
                         <Link href="/reseller" className="text-xl font-black text-white flex items-center gap-2 mb-12">
                             <span className="bg-primary text-[#07071a] w-8 h-8 rounded flex items-center justify-center font-bold">S</span>
@@ -132,7 +132,7 @@ export default function ResellerRegisterPage() {
                 </div>
 
                 {/* Bagian Kanan: Form Register */}
-                <div className="md:col-span-3 p-8 lg:p-12">
+                <div className="lg:col-span-3 p-8 lg:p-12 bg-[#0e0e24]">
                     {success ? (
                         <div className="h-full flex flex-col items-center justify-center text-center">
                             <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mb-6">

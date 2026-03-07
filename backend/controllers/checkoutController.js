@@ -258,29 +258,41 @@ exports.tripayCallback = async (req, res, next) => {
             try {
                 const targetId = order.zone_id ? `${order.customer_id}${order.zone_id}` : order.customer_id;
 
-                // --- SaaS Logic: Deduct Tenant Balance first ---
+                // --- SaaS Logic: Deduct Tenant Balance first, Record Profit ---
                 const hargaModal = parseFloat(order.Product?.price_buy || 0);
+                const hargaJual = parseFloat(order.total_amount || 0);
                 const currentBalance = parseFloat(req.tenant.balance || 0);
+                const currentCash = parseFloat(req.tenant.dagangCash || 0);
 
                 if (currentBalance < hargaModal) {
-                    throw new Error(`Saldo tenant tidak mencukupi untuk memproses order ini. Saldo: ${currentBalance}, Butuh: ${hargaModal}`);
+                    throw new Error(`Saldo Dagang Point tidak cukup! Saldo: ${currentBalance}, Butuh: ${hargaModal}`);
                 }
 
-                // Potong saldo
                 req.tenant.balance = currentBalance - hargaModal;
+                req.tenant.dagangCash = currentCash + (hargaJual - hargaModal);
                 await req.tenant.save();
-                // BUG FIX #3: Invalidate cache agar request berikutnya baca saldo fresh dari DB Master
                 invalidateTenantCache(req.tenant.subdomain);
 
-                // Catat mutasi
                 const TenantBalanceLog = require('../master_models/TenantBalanceLog');
                 await TenantBalanceLog.create({
                     tenantId: req.tenant.id,
                     type: 'topup_deduct',
+                    balance_type: 'point',
                     amount: hargaModal,
                     balanceBefore: currentBalance,
                     balanceAfter: req.tenant.balance,
-                    note: `Deduct untuk order ${invoiceNumber} (${order.Product?.name})`,
+                    note: `Deduct Point untuk order ${invoiceNumber} (${order.Product?.name})`,
+                    orderId: invoiceNumber
+                });
+
+                await TenantBalanceLog.create({
+                    tenantId: req.tenant.id,
+                    type: 'manual_credit',
+                    balance_type: 'cash',
+                    amount: (hargaJual - hargaModal),
+                    balanceBefore: currentCash,
+                    balanceAfter: req.tenant.dagangCash,
+                    note: `Profit masuk dari order ${invoiceNumber}`,
                     orderId: invoiceNumber
                 });
                 // -----------------------------------------------
@@ -365,24 +377,40 @@ exports.tripayCallback = async (req, res, next) => {
                 console.error("DigiFlazz Topup failed during callback:", digiErr);
                 await order.update({ order_status: 'Failed' });
 
-                // --- SaaS Logic: Refund Tenant Balance ---
+                // --- SaaS Logic: Refund Tenant Balance & Revert Profit ---
                 try {
                     const hargaModal = parseFloat(order.Product?.price_buy || 0);
+                    const hargaJual = parseFloat(order.total_amount || 0);
+
                     if (hargaModal > 0 && req.tenant) {
                         const currentBalance = parseFloat(req.tenant.balance || 0);
+                        const currentCash = parseFloat(req.tenant.dagangCash || 0);
+
                         req.tenant.balance = currentBalance + hargaModal;
+                        req.tenant.dagangCash = currentCash - (hargaJual - hargaModal);
                         await req.tenant.save();
-                        // BUG FIX #3: Invalidate cache setelah refund juga
                         invalidateTenantCache(req.tenant.subdomain);
 
                         const TenantBalanceLog = require('../master_models/TenantBalanceLog');
                         await TenantBalanceLog.create({
                             tenantId: req.tenant.id,
                             type: 'refund',
+                            balance_type: 'point',
                             amount: hargaModal,
                             balanceBefore: currentBalance,
                             balanceAfter: req.tenant.balance,
-                            note: `Refund order gagal ${invoiceNumber} (${order.Product?.name})`,
+                            note: `Refund Point order gagal ${invoiceNumber} (${order.Product?.name})`,
+                            orderId: invoiceNumber
+                        });
+
+                        await TenantBalanceLog.create({
+                            tenantId: req.tenant.id,
+                            type: 'manual_debit',
+                            balance_type: 'cash',
+                            amount: (hargaJual - hargaModal),
+                            balanceBefore: currentCash,
+                            balanceAfter: req.tenant.dagangCash,
+                            note: `Batal Profit order gagal ${invoiceNumber}`,
                             orderId: invoiceNumber
                         });
                     }
@@ -523,14 +551,19 @@ exports.digiflazzWebhook = async (req, res, next) => {
         } else if (data.status === 'Gagal') {
             await order.update({ order_status: 'Failed' });
 
-            // --- SaaS Logic: Refund Tenant Balance ---
+            // --- SaaS Logic: Refund Tenant Balance & Revert Profit ---
             try {
                 const hargaModal = parseFloat(order.Product?.price_buy || 0);
+                const hargaJual = parseFloat(order.total_amount || 0);
+
                 if (hargaModal > 0 && tenant) {
                     const currentBalance = parseFloat(tenant.balance || 0);
+                    const currentCash = parseFloat(tenant.dagangCash || 0);
+
                     tenant.balance = currentBalance + hargaModal;
+                    tenant.dagangCash = currentCash - (hargaJual - hargaModal);
                     await tenant.save();
-                    // Invalidate cache setelah refund dari webhook
+
                     const { invalidateTenantCache } = require('../middlewares/tenantMiddleware');
                     invalidateTenantCache(tenant.subdomain);
 
@@ -538,10 +571,22 @@ exports.digiflazzWebhook = async (req, res, next) => {
                     await TenantBalanceLog.create({
                         tenantId: tenant.id,
                         type: 'refund',
+                        balance_type: 'point',
                         amount: hargaModal,
                         balanceBefore: currentBalance,
                         balanceAfter: tenant.balance,
-                        note: `Refund order gagal (Webhook) ${invoiceNumber}`,
+                        note: `Refund Point order gagal (Webhook) ${invoiceNumber}`,
+                        orderId: invoiceNumber
+                    });
+
+                    await TenantBalanceLog.create({
+                        tenantId: tenant.id,
+                        type: 'manual_debit',
+                        balance_type: 'cash',
+                        amount: (hargaJual - hargaModal),
+                        balanceBefore: currentCash,
+                        balanceAfter: tenant.dagangCash,
+                        note: `Batal Profit order gagal (Webhook) ${invoiceNumber}`,
                         orderId: invoiceNumber
                     });
                 }
@@ -640,12 +685,18 @@ exports.manualCheckDigiflazz = async (req, res, next) => {
             newOrderStatus = 'Failed';
             await order.update({ order_status: 'Failed' });
 
-            // Refund saldo tenant
+            // Refund saldo tenant & Revert Profit
             const hargaModal = parseFloat(order.Product?.price_buy || 0);
+            const hargaJual = parseFloat(order.total_amount || 0);
+
             if (hargaModal > 0 && req.tenant) {
                 const currentBalance = parseFloat(req.tenant.balance || 0);
+                const currentCash = parseFloat(req.tenant.dagangCash || 0);
+
                 req.tenant.balance = currentBalance + hargaModal;
+                req.tenant.dagangCash = currentCash - (hargaJual - hargaModal);
                 await req.tenant.save();
+
                 const { invalidateTenantCache } = require('../middlewares/tenantMiddleware');
                 invalidateTenantCache(req.tenant.subdomain);
 
@@ -653,10 +704,22 @@ exports.manualCheckDigiflazz = async (req, res, next) => {
                 await TenantBalanceLog.create({
                     tenantId: req.tenant.id,
                     type: 'refund',
+                    balance_type: 'point',
                     amount: hargaModal,
                     balanceBefore: currentBalance,
                     balanceAfter: req.tenant.balance,
-                    note: `Refund manual check - order gagal ${order.invoice_number}`,
+                    note: `Refund Point order gagal (Manual) ${order.invoice_number}`,
+                    orderId: order.invoice_number
+                });
+
+                await TenantBalanceLog.create({
+                    tenantId: req.tenant.id,
+                    type: 'manual_debit',
+                    balance_type: 'cash',
+                    amount: (hargaJual - hargaModal),
+                    balanceBefore: currentCash,
+                    balanceAfter: req.tenant.dagangCash,
+                    note: `Batal Profit order gagal (Manual) ${order.invoice_number}`,
                     orderId: order.invoice_number
                 });
             }

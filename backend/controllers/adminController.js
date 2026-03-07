@@ -56,7 +56,9 @@ const adminController = {
                 totalOrders,
                 totalRevenue: totalRevenue || 0,
                 recentOrders,
-                digiflazzBalance // Tambahkan ini
+                digiflazzBalance,
+                dagangPoint: parseFloat(req.tenant?.balance || 0),
+                dagangCash: parseFloat(req.tenant?.dagangCash || 0)
             });
         } catch (error) {
             res.status(500).json({ message: 'Error fetching dashboard stats', error });
