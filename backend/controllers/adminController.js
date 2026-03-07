@@ -5,8 +5,8 @@ const adminController = {
     getSyncStatus: (req, res) => {
         const { Category, Voucher, Product, Order, User, Deposit } = req.db.models;
         try {
-            const digiflazzService = require('../services/digiflazzService');
-            const status = digiflazzService.getSyncStatus();
+            const { getSyncStatus } = require('../services/digiflazzService');
+            const status = getSyncStatus();
             res.json(status);
         } catch (e) {
             res.status(500).json({ error: true, message: e.message });
@@ -17,6 +17,22 @@ const adminController = {
     getDashboardStats: async (req, res) => {
         const { Category, Voucher, Product, Order, User, Deposit } = req.db.models;
         try {
+            const { DigiflazzService } = require('../services/digiflazzService');
+            let digiflazzBalance = 0;
+            try {
+                // Gunakan akun pusat jika req.tenantConfig kosong (SuperAdmin fallback) atau gunakan milik tenant
+                const dfUsername = req.tenantConfig?.digiflazzUsername || process.env.DIGIFLAZZ_USERNAME;
+                const dfKey = req.tenantConfig?.digiflazzKey || process.env.DIGIFLAZZ_KEY;
+
+                const dfService = new DigiflazzService(dfUsername, dfKey);
+                const balanceData = await dfService.checkBalance();
+                if (balanceData && balanceData.deposit !== undefined) {
+                    digiflazzBalance = balanceData.deposit;
+                }
+            } catch (err) {
+                console.error("Gagal mendapatkan saldo Digiflazz di Dashboard:", err.message);
+            }
+
             // Run all count/sum in parallel for speed
             const [totalUsers, totalOrders, totalRevenue, recentOrders] = await Promise.all([
                 User.count(),
@@ -39,7 +55,8 @@ const adminController = {
                 totalUsers,
                 totalOrders,
                 totalRevenue: totalRevenue || 0,
-                recentOrders
+                recentOrders,
+                digiflazzBalance // Tambahkan ini
             });
         } catch (error) {
             res.status(500).json({ message: 'Error fetching dashboard stats', error });
@@ -224,9 +241,10 @@ const adminController = {
     syncDigiflazzProducts: async (req, res) => {
         const { Category, Voucher, Product, Order, User, Deposit } = req.db.models;
         try {
-            const digiflazzService = require('../services/digiflazzService');
+            const { DigiflazzService } = require('../services/digiflazzService');
+            const dfService = new DigiflazzService(req.tenantConfig?.digiflazzUsername, req.tenantConfig?.digiflazzKey);
 
-            const digiProducts = await digiflazzService.getPriceList();
+            const digiProducts = await dfService.getPriceList();
 
             if (!Array.isArray(digiProducts)) {
                 return res.status(400).json({
@@ -316,7 +334,11 @@ const adminController = {
                         price_buy: item.price,
                         isActive: item.seller_product_status,
                         stock: item.unlimited_stock ? -1 : item.stock,
-                        voucherId: voucher.id  // Ensure FK is always correct on re-sync
+                        voucherId: voucher.id,  // Ensure FK is always correct on re-sync
+                        multi: item.multi || false,
+                        cut_off_start: item.start_cut_off || null,
+                        cut_off_end: item.end_cut_off || null,
+                        provider_desc: item.desc || null
                     }, { where: { sku: item.buyer_sku_code } });
                     updatedCount++;
                 } else {
@@ -328,7 +350,11 @@ const adminController = {
                         price_sell: defaultSellPrice,
                         stock: item.unlimited_stock ? -1 : item.stock,
                         isActive: item.seller_product_status,
-                        voucherId: voucher.id
+                        voucherId: voucher.id,
+                        multi: item.multi || false,
+                        cut_off_start: item.start_cut_off || null,
+                        cut_off_end: item.end_cut_off || null,
+                        provider_desc: item.desc || null
                     });
                     newCount++;
                 }

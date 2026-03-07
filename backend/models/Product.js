@@ -44,6 +44,26 @@ module.exports = (sequelize, DataTypes) => {
         image_url: {
             type: DataTypes.STRING,
             allowNull: true,
+        },
+        multi: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false,
+            comment: 'Membutuhkan lebih dari 1 input? (GameID + ZoneID)',
+        },
+        cut_off_start: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            comment: 'Waktu mulai cut-off (e.g., 23:45)',
+        },
+        cut_off_end: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            comment: 'Waktu selesai cut-off (e.g., 00:15)',
+        },
+        provider_desc: {
+            type: DataTypes.TEXT,
+            allowNull: true,
+            comment: 'Deskripsi asli dari provider',
         }
     }, {
         timestamps: true,

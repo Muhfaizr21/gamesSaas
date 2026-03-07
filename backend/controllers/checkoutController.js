@@ -1,9 +1,6 @@
-const { Order, Product, Voucher, User, Promo, PromoCode } = require('../models');
+// Removed global models require
 const { Op } = require('sequelize');
 const whatsappService = require('../services/whatsappService');
-const prismalinkService = require('../services/prismalinkService');
-const digiflazzService = require('../services/digiflazzService');
-
 // Demo payment channels - ditampilkan jika PrismaLink belum dikonfigurasi / sandbox mode
 const DEMO_CHANNELS = [
     { group: 'Virtual Account', code: '014', name: 'BCA Virtual Account', icon_url: 'https://upload.wikimedia.org/wikipedia/commons/5/5c/Bank_Central_Asia.svg', active: true },
@@ -15,16 +12,18 @@ const DEMO_CHANNELS = [
     { group: 'Convenience Store', code: 'ALFAMART', name: 'Alfamart', icon_url: 'https://upload.wikimedia.org/wikipedia/commons/8/86/Alfamart_logo.svg', active: true }
 ];
 
-const isDemoMode = () => {
-    const key = process.env.PRISMALINK_SECRET_KEY;
+const isDemoMode = (req) => {
+    const key = req?.tenantConfig?.prismalinkSecretKey || process.env.PRISMALINK_SECRET_KEY;
     return !key || key === 'your_prismalink_secret_key' || key.length < 10;
 };
 
 exports.getPaymentChannels = async (req, res, next) => {
     try {
-        if (isDemoMode()) {
+        if (isDemoMode(req)) {
             return res.json(DEMO_CHANNELS);
         }
+        const PrismalinkService = require('../services/prismalinkService');
+        const prismalinkService = new PrismalinkService(req.tenantConfig?.prismalinkMerchantId, req.tenantConfig?.prismalinkSecretKey);
         const channels = await prismalinkService.getPaymentChannels();
         res.json(channels.data || DEMO_CHANNELS);
     } catch (error) {
@@ -34,6 +33,7 @@ exports.getPaymentChannels = async (req, res, next) => {
 
 exports.createOrder = async (req, res, next) => {
     try {
+        const { Order, Product, Voucher, User, Promo, PromoCode } = req.db.models;
         const { productId, customerId, zoneId, paymentMethod, customerName, whatsappNumber, usePoints, promoCode } = req.body;
         const userId = req.user?.id || null;
 
@@ -99,7 +99,7 @@ exports.createOrder = async (req, res, next) => {
                 }
 
                 const testTotal = subtotal - pointsDiscount;
-                if (testTotal > 0 && testTotal < 10000 && !isDemoMode()) {
+                if (testTotal > 0 && testTotal < 10000 && !isDemoMode(req)) {
                     pointsDiscount = subtotal - 10000; // clamp so they pay 10k min
                     if (pointsDiscount < 0) pointsDiscount = 0;
                 }
@@ -142,7 +142,7 @@ exports.createOrder = async (req, res, next) => {
             whatsappService.sendMessage(whatsappNumber, msg);
         }
 
-        if (isDemoMode()) {
+        if (isDemoMode(req)) {
             return res.status(201).json({
                 success: true,
                 invoice_number: invoiceNumber,
@@ -164,6 +164,8 @@ exports.createOrder = async (req, res, next) => {
             return_url: `http://localhost:3000/invoice/${invoiceNumber}`
         };
 
+        const PrismalinkService = require('../services/prismalinkService');
+        const prismalinkService = new PrismalinkService(req.tenantConfig?.prismalinkMerchantId, req.tenantConfig?.prismalinkSecretKey);
         const prismalinkResponse = await prismalinkService.createClosedPayment(prismalinkParams);
 
         if (prismalinkResponse && prismalinkResponse.success) {
@@ -189,6 +191,9 @@ exports.createOrder = async (req, res, next) => {
 
 exports.prismalinkCallback = async (req, res, next) => {
     try {
+        const { Order, Product, User } = req.db.models;
+        const PrismalinkService = require('../services/prismalinkService');
+        const prismalinkService = new PrismalinkService(req.tenantConfig?.prismalinkMerchantId, req.tenantConfig?.prismalinkSecretKey);
         const isValid = prismalinkService.verifyCallbackSignature(req);
         if (!isValid) return res.status(400).json({ success: false, message: 'Invalid signature' });
 
@@ -208,7 +213,51 @@ exports.prismalinkCallback = async (req, res, next) => {
 
             try {
                 const targetId = order.zone_id ? `${order.customer_id}${order.zone_id}` : order.customer_id;
-                const digiRes = await digiflazzService.createTransaction(order.Product.sku, targetId, invoiceNumber);
+
+                // --- SaaS Logic: Deduct Tenant Balance first ---
+                const hargaModal = parseFloat(order.Product?.price_buy || 0);
+                const currentBalance = parseFloat(req.tenant.balance || 0);
+
+                if (currentBalance < hargaModal) {
+                    throw new Error(`Saldo tenant tidak mencukupi untuk memproses order ini. Saldo: ${currentBalance}, Butuh: ${hargaModal}`);
+                }
+
+                // Potong saldo
+                req.tenant.balance = currentBalance - hargaModal;
+                await req.tenant.save();
+
+                // Catat mutasi
+                const TenantBalanceLog = require('../master_models/TenantBalanceLog');
+                await TenantBalanceLog.create({
+                    tenantId: req.tenant.id,
+                    type: 'topup_deduct',
+                    amount: hargaModal,
+                    balanceBefore: currentBalance,
+                    balanceAfter: req.tenant.balance,
+                    note: `Deduct untuk order ${invoiceNumber} (${order.Product?.name})`,
+                    orderId: invoiceNumber
+                });
+                // -----------------------------------------------
+
+                const { DigiflazzService } = require('../services/digiflazzService');
+                // Menggunakan akun SuperAdmin PUSAT dari env (atau PlatformSetting)
+                const dfService = new DigiflazzService(
+                    process.env.DIGIFLAZZ_USERNAME,
+                    process.env.DIGIFLAZZ_KEY
+                );
+
+                const refIdToDigi = `${req.tenant.subdomain}-${invoiceNumber}`;
+                const digiRes = await dfService.createTransaction(order.Product.sku, targetId, refIdToDigi);
+
+                // Catat transaksi server ke ProviderLog
+                const ProviderLog = require('../master_models/ProviderLog');
+                await ProviderLog.create({
+                    providerName: 'digiflazz',
+                    eventType: 'topup_result',
+                    payload: JSON.stringify(digiRes),
+                    status: (digiRes.status === 'Sukses' ? 'success' : 'pending'),
+                    errorMessage: digiRes.message || null
+                });
 
                 await order.update({
                     order_status: 'Success',
@@ -259,6 +308,31 @@ exports.prismalinkCallback = async (req, res, next) => {
             } catch (digiErr) {
                 console.error("DigiFlazz Topup failed during callback:", digiErr);
                 await order.update({ order_status: 'Failed' });
+
+                // --- SaaS Logic: Refund Tenant Balance ---
+                try {
+                    const hargaModal = parseFloat(order.Product?.price_buy || 0);
+                    if (hargaModal > 0 && req.tenant) {
+                        const currentBalance = parseFloat(req.tenant.balance || 0);
+                        req.tenant.balance = currentBalance + hargaModal;
+                        await req.tenant.save();
+
+                        const TenantBalanceLog = require('../master_models/TenantBalanceLog');
+                        await TenantBalanceLog.create({
+                            tenantId: req.tenant.id,
+                            type: 'refund',
+                            amount: hargaModal,
+                            balanceBefore: currentBalance,
+                            balanceAfter: req.tenant.balance,
+                            note: `Refund order gagal ${invoiceNumber} (${order.Product?.name})`,
+                            orderId: invoiceNumber
+                        });
+                    }
+                } catch (refundErr) {
+                    console.error("Gagal melakukan refund saldo tenant:", refundErr);
+                }
+                // ------------------------------------------
+
                 if (order.whatsapp_number) {
                     const msg = `Halo,\n\nPembayaran untuk *${invoiceNumber}* berhasil diterima, namun pesanan GAGAL diproses oleh server provider. Silakan hubungi Admin untuk refund.`;
                     whatsappService.sendMessage(order.whatsapp_number, msg);
@@ -286,6 +360,7 @@ exports.prismalinkCallback = async (req, res, next) => {
 
 exports.getOrderByInvoice = async (req, res, next) => {
     try {
+        const { Order, Product, Voucher } = req.db.models;
         const order = await Order.findOne({
             where: { invoice_number: req.params.invoiceNumber },
             include: [{ model: Product, include: [Voucher] }]
@@ -295,5 +370,137 @@ exports.getOrderByInvoice = async (req, res, next) => {
         res.json(order);
     } catch (error) {
         next(error);
+    }
+};
+
+exports.digiflazzWebhook = async (req, res, next) => {
+    try {
+        const crypto = require('crypto');
+        const signature = req.headers['x-hub-signature'];
+        const eventName = req.headers['x-digiflazz-event'];
+
+        if (!signature || !eventName) {
+            return res.status(400).json({ message: 'Invalid headers' });
+        }
+
+        // Ambil key Digiflazz Super Admin (karena semua trx via Super Admin)
+        const dfKey = process.env.DIGIFLAZZ_KEY || 'your_digiflazz_key';
+
+        // Verifikasi Signature
+        const payloadStr = JSON.stringify(req.body);
+        const expectedSig = 'sha1=' + crypto.createHmac('sha1', dfKey).update(payloadStr).digest('hex');
+
+        if (signature !== expectedSig) {
+            console.error('[DigiFlazz Webhook] Signature mismatch');
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        const data = req.body.data;
+        if (!data || !data.ref_id) {
+            return res.status(400).json({ message: 'Invalid payload' });
+        }
+
+        const refIdParts = data.ref_id.split('-');
+        let invoiceNumber = data.ref_id;
+        let tenantSubdomain = 'budi'; // fallback
+
+        if (refIdParts.length > 2 && refIdParts[1] === 'INV') {
+            // ref_id kita formatnya: [subdomain]-INV-[timestamp]-[rand]
+            tenantSubdomain = refIdParts[0];
+            invoiceNumber = refIdParts.slice(1).join('-');
+        } else {
+            invoiceNumber = data.ref_id;
+        }
+
+        const Tenant = require('../master_models/Tenant');
+        const { getTenantConnection } = require('../services/dbPoolManager');
+
+        const tenant = await Tenant.findOne({ where: { subdomain: tenantSubdomain } });
+        if (!tenant) {
+            console.error('[DigiFlazz Webhook] Tenant not found:', tenantSubdomain);
+            return res.status(404).json({ message: 'Tenant not found' });
+        }
+
+        const dbConn = await getTenantConnection(tenant);
+        const { Order, Product, User } = dbConn.models;
+
+        const order = await Order.findOne({
+            where: { invoice_number: invoiceNumber },
+            include: [{ model: Product, attributes: ['price_buy', 'name'] }]
+        });
+
+        if (!order) {
+            console.error('[DigiFlazz Webhook] Order not found:', invoiceNumber);
+            return res.status(404).json({ message: 'Order not found' });
+        }
+
+        if (order.order_status === 'Success' || order.order_status === 'Failed') {
+            return res.json({ message: 'Already processed' });
+        }
+
+        console.log(`[DigiFlazz Webhook] Update Order ${invoiceNumber} to ${data.status} (RC: ${data.rc})`);
+
+        if (data.status === 'Sukses') {
+            await order.update({
+                order_status: 'Success',
+                sn: data.sn || null
+            });
+
+            // --- Trigger Profit Savings ---
+            const prevStatus = order.order_status;
+            if (prevStatus !== 'Success') {
+                const financeController = require('./financeController');
+                const revenue = parseFloat(order.price || 0);
+                const modal = parseFloat(order.Product?.price_buy || 0);
+                const fee = parseFloat(order.fee || 0);
+                const profit = revenue - modal - fee;
+                await financeController.distributeProfitToSavings(profit, order.id, order.invoice_number);
+            }
+            // -------------------------------
+
+            if (order.whatsapp_number) {
+                const msg = `Halo,\n\nPesanan Anda *${order.Product?.name}* dengan Invoice *${invoiceNumber}* Telah SUKSES!\nSN: ${data.sn || '-'}\nTerima kasih telah berbelanja!`;
+                whatsappService.sendMessage(order.whatsapp_number, msg);
+            }
+
+        } else if (data.status === 'Gagal') {
+            await order.update({ order_status: 'Failed' });
+
+            // --- SaaS Logic: Refund Tenant Balance ---
+            try {
+                const hargaModal = parseFloat(order.Product?.price_buy || 0);
+                if (hargaModal > 0 && tenant) {
+                    const currentBalance = parseFloat(tenant.balance || 0);
+                    tenant.balance = currentBalance + hargaModal;
+                    await tenant.save();
+
+                    const TenantBalanceLog = require('../master_models/TenantBalanceLog');
+                    await TenantBalanceLog.create({
+                        tenantId: tenant.id,
+                        type: 'refund',
+                        amount: hargaModal,
+                        balanceBefore: currentBalance,
+                        balanceAfter: tenant.balance,
+                        note: `Refund order gagal (Webhook) ${invoiceNumber}`,
+                        orderId: invoiceNumber
+                    });
+                }
+            } catch (refundErr) {
+                console.error("Gagal melakukan refund saldo tenant di Webhook:", refundErr);
+            }
+            // ------------------------------------------
+
+            if (order.whatsapp_number) {
+                const msg = `Halo,\n\nPesanan Anda *${order.Product?.name}* (Invoice: *${invoiceNumber}*) GAGAL diproses oleh provider. Silakan hubungi Admin untuk bantuan.`;
+                whatsappService.sendMessage(order.whatsapp_number, msg);
+            }
+        } else if (data.status === 'Pending') {
+            await order.update({ order_status: 'Pending' });
+        }
+
+        res.json({ success: true, message: 'Webhook processed' });
+    } catch (error) {
+        console.error('[DigiFlazz Webhook] Error:', error);
+        res.status(500).json({ message: 'Internal Server Error' });
     }
 };

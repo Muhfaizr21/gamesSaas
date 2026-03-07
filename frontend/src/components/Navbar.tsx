@@ -11,7 +11,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 export default function Navbar() {
     const { user, logout, isLoading } = useAuth();
     const router = useRouter();
-    const pathname = usePathname();
+    const pathname = usePathname() || '';
+
+    // Bulletproof: Immediately nullify if on reseller, admin, or writer
+    const lowerPath = pathname.toLowerCase();
+    if (lowerPath.includes('/reseller') || lowerPath.includes('/admin') || lowerPath.includes('/writer')) {
+        return null;
+    }
 
     // Search states
     const [searchQuery, setSearchQuery] = useState('');
@@ -216,20 +222,17 @@ export default function Navbar() {
                             </div>
                         ) : (
                             <div className="flex items-center gap-2">
-                                <Link href="/login" className="hidden lg:flex items-center justify-center h-10 px-6 rounded-full border border-white/10 bg-white/5 text-white font-bold text-xs uppercase tracking-widest hover:bg-white/10 transition-colors">
-                                    Masuk
-                                </Link>
-                                <Link href="/register" className="hidden lg:flex items-center justify-center h-10 px-6 rounded-full bg-primary text-black font-black text-xs uppercase tracking-widest hover:scale-105 transition-transform shadow-[0_0_20px_rgba(250,204,21,0.2)]">
-                                    Daftar
+                                <Link href="/reseller" className="hidden lg:flex items-center justify-center h-10 px-6 rounded-full bg-primary text-black font-black text-xs uppercase tracking-widest hover:scale-105 transition-transform shadow-[0_0_20px_rgba(250,204,21,0.2)]">
+                                    Buka Toko Sendiri!
                                 </Link>
                             </div>
                         )
                     )}
 
                     {/* Mobile/Tablet User Avatar Placeholder */}
-                    <div className="lg:hidden flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-tr from-primary to-yellow-600 text-black font-black cursor-pointer shadow-lg active:scale-95 transition-transform">
+                    <Link href={user ? "/dashboard" : "/reseller"} className="lg:hidden flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-tr from-primary to-yellow-600 text-black font-black cursor-pointer shadow-lg active:scale-95 transition-transform">
                         {user ? user.name.charAt(0).toUpperCase() : <LogIn className="h-4 w-4" />}
-                    </div>
+                    </Link>
                 </div>
             </div>
 

@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: topup_backend
+    ports:
+      - "3001:3001"
+    environment:
+      # Use host.docker.internal to connect to MAMP MySQL running on your Mac host
+      - DB_HOST=host.docker.internal
+      - DB_PORT=8889
+      - DB_USER=root
+      - DB_PASS=root
+      - DB_NAME=topup_db
+    env_file:
+      - ./backend/.env
+    restart: always
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: topup_frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:3001
+      # Note: Di dalam docker, frontend tetap memanggil localhost:3001 karena ini client-side fetching yang terjadi di browser user
+    env_file:
+      - ./frontend/.env
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      # Tujuannya agar hot-reload frontend tetap jalan waktu anda ngedit kode
+    restart: always

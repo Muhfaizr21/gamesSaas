@@ -1,10 +1,9 @@
-const prismalinkService = require('../services/prismalinkService');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 // Register a new user
 exports.register = async (req, res) => {
-        const { User, Order, Deposit, Product, Voucher, Review } = req.db.models;
+    const { User, Order, Deposit, Product, Voucher, Review } = req.db.models;
     try {
         const { name, email, whatsapp, password } = req.body;
 
@@ -61,7 +60,7 @@ exports.register = async (req, res) => {
 
 // Login user
 exports.login = async (req, res) => {
-        const { User, Order, Deposit, Product, Voucher, Review } = req.db.models;
+    const { User, Order, Deposit, Product, Voucher, Review } = req.db.models;
     try {
         const { email, whatsapp, password } = req.body;
 
@@ -85,9 +84,22 @@ exports.login = async (req, res) => {
         }
 
         // Generate token
+        let secret = process.env.JWT_SECRET || 'fallback_secret_key';
+        let payload = { id: user.id, role: user.role };
+
+        let isSuperAdminTenant = false;
+        if (req.tenant) {
+            isSuperAdminTenant = req.tenant.subdomain === (process.env.DEFAULT_TENANT || 'budi');
+        }
+
+        if (user.role === 'admin' && isSuperAdminTenant) {
+            secret = process.env.SUPERADMIN_JWT_SECRET || 'superadmin-jwt-very-secret-2026';
+            payload.isSuperAdmin = true;
+        }
+
         const token = jwt.sign(
-            { id: user.id, role: user.role },
-            process.env.JWT_SECRET || 'fallback_secret_key',
+            payload,
+            secret,
             { expiresIn: '7d' }
         );
 
@@ -111,7 +123,7 @@ exports.login = async (req, res) => {
 
 // Get current user profile
 exports.getMe = async (req, res) => {
-        const { User, Order, Deposit, Product, Voucher, Review } = req.db.models;
+    const { User, Order, Deposit, Product, Voucher, Review } = req.db.models;
     try {
         const user = await User.findByPk(req.user.id, {
             attributes: { exclude: ['password'] }
@@ -130,7 +142,7 @@ exports.getMe = async (req, res) => {
 
 // Update user profile (name, email, whatsapp)
 exports.updateProfile = async (req, res) => {
-        const { User, Order, Deposit, Product, Voucher, Review } = req.db.models;
+    const { User, Order, Deposit, Product, Voucher, Review } = req.db.models;
     try {
         const { name, email, whatsapp } = req.body;
         const userId = req.user.id;
@@ -165,7 +177,7 @@ exports.updateProfile = async (req, res) => {
 
 // Change password
 exports.changePassword = async (req, res) => {
-        const { User, Order, Deposit, Product, Voucher, Review } = req.db.models;
+    const { User, Order, Deposit, Product, Voucher, Review } = req.db.models;
     try {
         const { currentPassword, newPassword } = req.body;
         const userId = req.user.id;
@@ -198,7 +210,7 @@ exports.changePassword = async (req, res) => {
 
 // Get my orders (transaction history)
 exports.getMyOrders = async (req, res) => {
-        const { User, Order, Deposit, Product, Voucher, Review } = req.db.models;
+    const { User, Order, Deposit, Product, Voucher, Review } = req.db.models;
     try {
         const orders = await Order.findAll({
             where: { userId: req.user.id },
@@ -230,7 +242,7 @@ exports.getMyOrders = async (req, res) => {
 
 // Create deposit via Prismalink (Otomatis)
 exports.createPrismalinkDeposit = async (req, res) => {
-        const { User, Order, Deposit, Product, Voucher, Review } = req.db.models;
+    const { User, Order, Deposit, Product, Voucher, Review } = req.db.models;
     try {
         const { amount, method } = req.body; // method = channel code e.g. '014', 'QRIS'
         const userId = req.user.id;
@@ -247,6 +259,12 @@ exports.createPrismalinkDeposit = async (req, res) => {
 
         // Buat merchant ref unik
         const merchantRef = `DEP-${userId}-${Date.now()}`;
+
+        const PrismalinkService = require('../services/prismalinkService');
+        const prismalinkService = new PrismalinkService(
+            req.tenantConfig?.prismalinkMerchantId,
+            req.tenantConfig?.prismalinkSecretKey
+        );
 
         // Buat Prismalink transaction
         const plResult = await prismalinkService.createClosedPayment({
@@ -287,7 +305,7 @@ exports.createPrismalinkDeposit = async (req, res) => {
 
 // Create deposit manual (konfirmasi ke admin)
 exports.createManualDeposit = async (req, res) => {
-        const { User, Order, Deposit, Product, Voucher, Review } = req.db.models;
+    const { User, Order, Deposit, Product, Voucher, Review } = req.db.models;
     try {
         const { amount, bank_name, account_number } = req.body;
         const userId = req.user.id;

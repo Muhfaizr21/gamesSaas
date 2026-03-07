@@ -12,7 +12,13 @@ exports.protect = (req, res, next) => {
     }
 
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key');
+        let decoded;
+        try {
+            decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key');
+        } catch (err) {
+            decoded = jwt.verify(token, process.env.SUPERADMIN_JWT_SECRET || 'superadmin-jwt-very-secret-2026');
+        }
+
         req.user = decoded; // { id, role }
         next();
     } catch (error) {

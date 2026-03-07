@@ -5,12 +5,16 @@ const { getTenantConnection } = require('../services/dbPoolManager');
 const tenantMiddleware = async (req, res, next) => {
     try {
         // Ambil header x-tenant (misal dari frontend saat fetch data) atau parsing dari Req.Hostname
-        // Karena ini local development (localhost:3000), kita butuh membaca "x-tenant" header.
         // Di server produksi riil ganti menggunakan let host = req.hostname;
-        const tenantSubdomain = req.headers['x-tenant'] || req.hostname.split('.')[0];
+        let tenantSubdomain = req.headers['x-tenant'] || req.hostname.split('.')[0];
 
+        // Untuk Local Development: Jika dari localhost, redirect ke toko 'budi' (topup_db asli)
         if (!tenantSubdomain || tenantSubdomain === 'localhost') {
-            return res.status(400).json({ message: 'Tenant identifier is missing. Gunakan x-tenant di header.' });
+            if (process.env.NODE_ENV !== 'production') {
+                tenantSubdomain = process.env.DEFAULT_TENANT || 'budi';
+            } else {
+                return res.status(400).json({ message: 'Tenant identifier is missing. Gunakan x-tenant di header.' });
+            }
         }
 
         // Cari data tenant di Database Master
@@ -25,6 +29,14 @@ const tenantMiddleware = async (req, res, next) => {
 
         if (tenant.status !== 'active') {
             return res.status(403).json({ message: `Toko '${tenant.name}' sedang dinonaktifkan / disuspend.` });
+        }
+
+        // Memeriksa apakah langganan sudah kedaluwarsa
+        if (tenant.subscriptionExpiresAt && new Date() > new Date(tenant.subscriptionExpiresAt)) {
+            return res.status(403).json({
+                message: `Masa aktif langganan toko '${tenant.name}' telah berakhir.`,
+                code: 'SUBSCRIPTION_EXPIRED'
+            });
         }
 
         // --- Proses Utama: Dynamic Database Allocation ---

@@ -42,14 +42,35 @@ const Tenant = masterSequelize.define('Tenant', {
     status: {
         type: DataTypes.ENUM('active', 'suspended', 'trial'),
         defaultValue: 'active',
+    },
+    balance: {
+        type: DataTypes.DECIMAL(15, 2),
+        allowNull: false,
+        defaultValue: 0,
+        comment: 'Saldo deposit reseller yang mengendap di superadmin'
+    },
+    planId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        comment: 'Foreign key to SaaSPlan'
+    },
+    subscriptionExpiresAt: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        comment: 'Tanggal berakhirnya paket SaaS. Null = trial/free'
     }
 }, {
     tableName: 'tenants',
     timestamps: true
 });
 
+const SaaSPlan = require('./SaaSPlan');
+
 // Relasi 1-to-1: 1 Tenant punya 1 Config Rahasia (API Keys)
 Tenant.hasOne(TenantConfig, { foreignKey: 'tenantId' });
 TenantConfig.belongsTo(Tenant, { foreignKey: 'tenantId' });
+
+// Relasi ke SaaS Plan
+Tenant.belongsTo(SaaSPlan, { foreignKey: 'planId', as: 'plan' });
 
 module.exports = Tenant;

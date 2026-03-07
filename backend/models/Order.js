@@ -102,6 +102,11 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.STRING,
             allowNull: true,
             comment: 'ID Trx dari provider seperti DigiFlazz',
+        },
+        sn: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            comment: 'Serial Number dari provider sebagai bukti sukses',
         }
     }, {
         timestamps: true,
@@ -118,7 +123,7 @@ module.exports = (sequelize, DataTypes) => {
         // Associations
         models.Order.belongsTo(models.User, { foreignKey: 'userId', allowNull: true });
         models.User.hasMany(models.Order, { foreignKey: 'userId' });
-        
+
         models.Order.belongsTo(models.Product, { foreignKey: 'productId' });
         models.Product.hasMany(models.Order, { foreignKey: 'productId' });
     };

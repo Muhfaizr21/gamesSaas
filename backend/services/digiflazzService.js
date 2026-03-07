@@ -44,9 +44,9 @@ function getSyncStatus() {
 module.exports.getSyncStatus = getSyncStatus;
 
 class DigiflazzService {
-    constructor() {
-        this.username = process.env.DIGIFLAZZ_USERNAME;
-        this.key = process.env.DIGIFLAZZ_KEY;
+    constructor(username, key) {
+        this.username = username || '';
+        this.key = key || '';
     }
 
     _generateSign(command) {
@@ -171,4 +171,7 @@ class DigiflazzService {
     }
 }
 
-module.exports = new DigiflazzService();
+module.exports = {
+    DigiflazzService,
+    getSyncStatus
+};

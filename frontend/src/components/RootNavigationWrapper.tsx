@@ -5,10 +5,16 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
 export function RootNavigationWrapper({ children }: { children: React.ReactNode }) {
-    const pathname = usePathname();
-    const isAdminRoute = pathname?.startsWith('/admin');
-    const isWriterRoute = pathname?.startsWith('/writer');
-    const hideNavbar = isAdminRoute || isWriterRoute;
+    const pathname = usePathname() || '';
+    const safePath = pathname.toLowerCase();
+
+    // Explicitly check for reseller, admin, writer
+    const isResellerRoute = safePath.includes('/reseller');
+    const isAdminRoute = safePath.includes('/admin');
+    const isWriterRoute = safePath.includes('/writer');
+
+    const hideNavbar = isAdminRoute || isWriterRoute || isResellerRoute;
+    const hideFooter = isAdminRoute || isWriterRoute || isResellerRoute;
 
     return (
         <>
@@ -16,7 +22,7 @@ export function RootNavigationWrapper({ children }: { children: React.ReactNode 
             <main>
                 {children}
             </main>
-            {!isAdminRoute && !isWriterRoute && <Footer />}
+            {!hideFooter && <Footer />}
         </>
     );
 }

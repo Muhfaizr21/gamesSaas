@@ -26,9 +26,16 @@ const errorHandler = require('./middlewares/errorHandler');
 
 const tenantMiddleware = require('./middlewares/tenantMiddleware');
 const masterRoutes = require('./routes/masterRoutes');
+const superAdminRoutes = require('./routes/superAdminRoutes');
 
-// --- Master Route (Superadmin, Tidak pakai Tenant Middleware!) ---
+// --- Super Admin Route (Pemilik Platform SaaS) ---
+app.use('/api/superadmin', superAdminRoutes);
+
+// --- Master Route (Legacy, tetap ada) ---
 app.use('/api/master', masterRoutes);
+
+// --- Global Webhooks (Tanpa Tenant Middleware) ---
+app.post('/api/webhook/digiflazz', require('./controllers/checkoutController').digiflazzWebhook);
 
 // --- Tenant Routes (Akan dicek oleh Middleware) ---
 app.use('/api/auth', tenantMiddleware, authRoutes);
@@ -49,6 +56,11 @@ app.use(errorHandler);
 const masterSequelize = require('./config/masterDatabase');
 masterSequelize.authenticate().then(() => {
   logger.success('Control Plane (Master DB) connected successfully');
+
+  // Inisialisasi schedule (Auto-Suspend Tenant)
+  const cronJobs = require('./scripts/cronJobs');
+  cronJobs.initCronJobs();
+
   app.listen(PORT, () => {
     logger.info(`🚀 SaaS Data Plane is running on http://localhost:${PORT}`);
   });

@@ -4,16 +4,20 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
     LayoutDashboard, Users, Gamepad2, ShoppingCart,
-    Settings, LogOut, Tag, MessageSquare,
-    BarChart2, Wallet, ChevronDown, PackageSearch, Gift, Box
+    Settings, LogOut, Tag, MessageSquare, Globe, Link as LinkIcon,
+    BarChart2, Wallet, ChevronDown, PackageSearch, Gift, Box, Server, Megaphone, ListVideo
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Store, CreditCard } from "lucide-react";
 
-const NavGroup = ({ title, icon: Icon, children, basePath, currentPath }: any) => {
-    // Tentukan apakah ada anak link yang sedang aktif
-    const isActive = currentPath.startsWith(basePath);
+const NavGroup = ({ title, icon: Icon, children, activePrefixes, currentPath }: any) => {
+    // Tentukan apakah ada anak link yang sedang aktif berdasarkan array activePrefixes
+    const isActive = activePrefixes
+        ? activePrefixes.some((prefix: string) => currentPath === prefix || currentPath.startsWith(`${prefix}/`))
+        : false;
+
     const [isOpen, setIsOpen] = useState(isActive);
 
     // Auto-open jika path sesuai
@@ -97,31 +101,48 @@ export function AdminSidebar() {
                     <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest px-4 mb-2">Modul Aplikasi</p>
 
                     {/* Katalog Produk Group */}
-                    <NavGroup title="Katalog Produk" icon={PackageSearch} basePath="/admin" currentPath={pathname}>
+                    <NavGroup title="Katalog Produk" icon={PackageSearch} activePrefixes={['/admin/kategori', '/admin/voucher', '/admin/produk']} currentPath={pathname}>
                         <NavItem href="/admin/kategori" icon={Box} label="Kategori Game" currentPath={pathname} />
                         <NavItem href="/admin/voucher" icon={Gamepad2} label="Daftar Game" currentPath={pathname} />
                         <NavItem href="/admin/produk" icon={ShoppingCart} label="Produk Item" currentPath={pathname} />
                     </NavGroup>
 
                     {/* Promosi & Event Group */}
-                    <NavGroup title="Promosi & Diskon" icon={Gift} basePath="/admin" currentPath={pathname}>
+                    <NavGroup title="Promosi & Diskon" icon={Gift} activePrefixes={['/admin/promo', '/admin/promo-code', '/admin/spin-prize']} currentPath={pathname}>
                         <NavItem href="/admin/promo" icon={Tag} label="Flash Sale" currentPath={pathname} />
                         <NavItem href="/admin/promo-code" icon={Tag} label="Kupon Diskon" currentPath={pathname} />
                         <NavItem href="/admin/spin-prize" icon={Gift} label="Gacha (Spin)" currentPath={pathname} />
                     </NavGroup>
 
                     {/* Transaksi & Keuangan Group */}
-                    <NavGroup title="Transaksi" icon={Wallet} basePath="/admin" currentPath={pathname}>
+                    <NavGroup title="Transaksi" icon={Wallet} activePrefixes={['/admin/pesanan', '/admin/deposit', '/admin/keuangan']} currentPath={pathname}>
                         <NavItem href="/admin/pesanan" icon={ShoppingCart} label="Pesanan" currentPath={pathname} />
                         <NavItem href="/admin/deposit" icon={Wallet} label="Deposit Saldo" currentPath={pathname} />
                         <NavItem href="/admin/keuangan" icon={BarChart2} label="Lap. Keuangan" currentPath={pathname} />
                     </NavGroup>
 
                     {/* Pengguna & Interaksi Group */}
-                    <NavGroup title="Pengguna & Sistem" icon={Users} basePath="/admin" currentPath={pathname}>
+                    <NavGroup title="Pengguna & Sistem" icon={Users} activePrefixes={['/admin/users', '/admin/review', '/admin/pengaturan']} currentPath={pathname}>
                         <NavItem href="/admin/users" icon={Users} label="User Terdaftar" currentPath={pathname} />
                         <NavItem href="/admin/review" icon={MessageSquare} label="Ulasan Pelanggan" currentPath={pathname} />
                         <NavItem href="/admin/pengaturan" icon={Settings} label="Pengaturan Web" currentPath={pathname} />
+                    </NavGroup>
+
+                    {/* Manajemen Reseller (Superadmin) */}
+                    <NavGroup title="Reseller Hub (SaaS)" icon={Store} activePrefixes={['/admin/tenants']} currentPath={pathname}>
+                        <NavItem href="/admin/tenants" icon={Store} label="Daftar Toko" currentPath={pathname} />
+                        <NavItem href="/admin/tenants/deposit" icon={CreditCard} label="Deposit Reseller" currentPath={pathname} />
+                        <NavItem href="/admin/tenants/domains" icon={Globe} label="Custom Domain" currentPath={pathname} />
+                        <NavItem href="/admin/tenants/plans" icon={ListVideo} label="Paket Langganan" currentPath={pathname} />
+                        <NavItem href="/admin/tenants/broadcasts" icon={Megaphone} label="Broadcast News" currentPath={pathname} />
+                    </NavGroup>
+
+                    {/* Konfigurasi Global Platform (Superadmin) */}
+                    <NavGroup title="Platform Settings" icon={Server} activePrefixes={['/admin/settings']} currentPath={pathname}>
+                        <NavItem href="/admin/settings/general" icon={Settings} label="General & Markup" currentPath={pathname} />
+                        <NavItem href="/admin/settings/providers" icon={LinkIcon} label="API Provider" currentPath={pathname} />
+                        <NavItem href="/admin/settings/payment" icon={Wallet} label="Payment Gateway" currentPath={pathname} />
+                        <NavItem href="/admin/settings/logs" icon={Server} label="Provider Logs" currentPath={pathname} />
                     </NavGroup>
                 </div>
             </div>

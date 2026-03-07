@@ -2,10 +2,10 @@ const crypto = require('crypto');
 const axios = require('axios');
 
 class PrismalinkService {
-    constructor() {
-        this.merchantId = process.env.PRISMALINK_MERCHANT_ID || '';
-        this.secretKey = process.env.PRISMALINK_SECRET_KEY || '';
-        this.apiUrl = process.env.PRISMALINK_API_URL || 'https://sandbox.prismalink.co.id/api/';
+    constructor(merchantId, secretKey, apiUrl) {
+        this.merchantId = merchantId || '';
+        this.secretKey = secretKey || '';
+        this.apiUrl = apiUrl || 'https://sandbox.prismalink.co.id/api/';
     }
 
     _generateSignature(merchantRef, amount) {
@@ -98,4 +98,4 @@ class PrismalinkService {
     }
 }
 
-module.exports = new PrismalinkService();
+module.exports = PrismalinkService;

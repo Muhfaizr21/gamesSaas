@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Users, ShoppingCart, DollarSign, TrendingUp, Clock, CheckCircle } from "lucide-react";
+import { Users, ShoppingCart, DollarSign, TrendingUp, Clock, CheckCircle, Wallet } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 export default function AdminDashboardPage() {
@@ -102,11 +102,13 @@ export default function AdminDashboardPage() {
                 <div className="bg-[#1a1a1a] border border-[#2a2a2a] p-6 rounded-2xl relative overflow-hidden group">
                     <div className="flex justify-between items-start mb-4">
                         <div>
-                            <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-1">Status Sistem</p>
-                            <h3 className="text-2xl font-bold text-green-500">Online</h3>
+                            <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-1">Saldo Provider</p>
+                            <h3 className="text-xl md:text-2xl font-bold text-amber-500">
+                                {stats?.digiflazzBalance !== undefined ? formatCurrency(stats.digiflazzBalance) : 'Rp0,00'}
+                            </h3>
                         </div>
-                        <div className="p-3 bg-green-500/10 rounded-xl text-green-500">
-                            <TrendingUp className="h-6 w-6" />
+                        <div className="p-3 bg-amber-500/10 rounded-xl text-amber-500">
+                            <Wallet className="h-6 w-6" />
                         </div>
                     </div>
                 </div>

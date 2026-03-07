@@ -12,10 +12,10 @@ interface SitemapItem {
 }
 
 const SITEMAPS: SitemapItem[] = [
-    { title: 'Sitemap Index', url: '/sitemap.xml', desc: 'Induk dari semua sitemap. Gunakan link ini untuk submit ke Google Search Console.' },
-    { title: 'Sitemap Pages', url: '/sitemap/0.xml', desc: 'Daftar semua halaman statis (Home, Daftar Artikel, Cek Pesanan, dll).' },
-    { title: 'Sitemap Games', url: '/sitemap/1.xml', desc: 'Daftar semua link topup game/voucher aktif.' },
-    { title: 'Sitemap Articles', url: '/sitemap/2.xml', desc: 'Daftar semua artikel blog yang sudah dipublikasikan.' },
+    { id: '1', title: 'Sitemap Index', url: '/sitemap.xml', desc: 'Induk dari semua sitemap. Gunakan link ini untuk submit ke Google Search Console.' },
+    { id: '2', title: 'Sitemap Pages', url: '/sitemap/0.xml', desc: 'Daftar semua halaman statis (Home, Daftar Artikel, Cek Pesanan, dll).' },
+    { id: '3', title: 'Sitemap Games', url: '/sitemap/1.xml', desc: 'Daftar semua link topup game/voucher aktif.' },
+    { id: '4', title: 'Sitemap Articles', url: '/sitemap/2.xml', desc: 'Daftar semua artikel blog yang sudah dipublikasikan.' },
 ];
 
 export default function SitemapPage() {
