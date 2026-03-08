@@ -52,8 +52,17 @@ module.exports = {
     createPlan: async (req, res) => {
         try {
             const { name, price, durationDays, features, badge, originalPrice, description } = req.body;
+            // Features might come as a JSON string from frontend
+            let finalFeatures = features;
+            if (typeof features === 'string') {
+                try { JSON.parse(features); } catch (e) { finalFeatures = JSON.stringify([features]); }
+            } else if (Array.isArray(features)) {
+                finalFeatures = JSON.stringify(features);
+            }
+
             const plan = await SaaSPlan.create({
-                name, price, durationDays, badge, originalPrice, description, features: JSON.stringify(features || [])
+                name, price, durationDays, badge, originalPrice, description,
+                features: finalFeatures || JSON.stringify([])
             });
             res.status(201).json({ message: 'Plan dibuat', plan });
         } catch (err) {
@@ -74,7 +83,16 @@ module.exports = {
             if (badge !== undefined) plan.badge = badge;
             if (description !== undefined) plan.description = description;
             if (durationDays) plan.durationDays = durationDays;
-            if (features) plan.features = JSON.stringify(features);
+
+            if (features !== undefined) {
+                if (typeof features === 'string') {
+                    // Check if it's already a valid JSON string
+                    try { JSON.parse(features); plan.features = features; }
+                    catch (e) { plan.features = JSON.stringify([features]); }
+                } else if (Array.isArray(features)) {
+                    plan.features = JSON.stringify(features);
+                }
+            }
             if (typeof isActive !== 'undefined') plan.isActive = isActive;
 
             await plan.save();

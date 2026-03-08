@@ -1,5 +1,6 @@
 const Tenant = require('../master_models/Tenant');
 const TenantConfig = require('../master_models/TenantConfig');
+const SaaSPlan = require('../master_models/SaaSPlan');
 const TenantBalanceLog = require('../master_models/TenantBalanceLog');
 const masterSequelize = require('../config/masterDatabase');
 const { Sequelize, Op } = require('sequelize');

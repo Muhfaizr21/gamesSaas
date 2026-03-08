@@ -98,36 +98,7 @@ export function AdminSidebar() {
                 </div>
 
                 <div className="space-y-2 px-2">
-                    <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest px-4 mb-2">Modul Aplikasi</p>
-
-                    {/* Katalog Produk Group */}
-                    <NavGroup title="Katalog Produk" icon={PackageSearch} activePrefixes={['/admin/kategori', '/admin/voucher', '/admin/produk']} currentPath={pathname}>
-                        <NavItem href="/admin/kategori" icon={Box} label="Kategori Game" currentPath={pathname} />
-                        <NavItem href="/admin/voucher" icon={Gamepad2} label="Daftar Game" currentPath={pathname} />
-                        <NavItem href="/admin/produk" icon={ShoppingCart} label="Produk Item" currentPath={pathname} />
-                    </NavGroup>
-
-                    {/* Promosi & Event Group */}
-                    <NavGroup title="Promosi & Diskon" icon={Gift} activePrefixes={['/admin/promo', '/admin/promo-code', '/admin/spin-prize']} currentPath={pathname}>
-                        <NavItem href="/admin/promo" icon={Tag} label="Flash Sale" currentPath={pathname} />
-                        <NavItem href="/admin/promo-code" icon={Tag} label="Kupon Diskon" currentPath={pathname} />
-                        <NavItem href="/admin/spin-prize" icon={Gift} label="Gacha (Spin)" currentPath={pathname} />
-                    </NavGroup>
-
-                    {/* Transaksi & Keuangan Group */}
-                    <NavGroup title="Transaksi" icon={Wallet} activePrefixes={['/admin/pesanan', '/admin/deposit', '/admin/keuangan', '/admin/deposit-reseller']} currentPath={pathname}>
-                        <NavItem href="/admin/pesanan" icon={ShoppingCart} label="Pesanan" currentPath={pathname} />
-                        <NavItem href="/admin/deposit" icon={Wallet} label="M-Banking (User)" currentPath={pathname} />
-                        <NavItem href="/admin/deposit-reseller" icon={CreditCard} label="Topup Saldo Toko" currentPath={pathname} />
-                        <NavItem href="/admin/keuangan" icon={BarChart2} label="Lap. Keuangan" currentPath={pathname} />
-                    </NavGroup>
-
-                    {/* Pengguna & Interaksi Group */}
-                    <NavGroup title="Pengguna & Sistem" icon={Users} activePrefixes={['/admin/users', '/admin/review', '/admin/pengaturan']} currentPath={pathname}>
-                        <NavItem href="/admin/users" icon={Users} label="User Terdaftar" currentPath={pathname} />
-                        <NavItem href="/admin/review" icon={MessageSquare} label="Ulasan Pelanggan" currentPath={pathname} />
-                        <NavItem href="/admin/pengaturan" icon={Settings} label="Pengaturan Web" currentPath={pathname} />
-                    </NavGroup>
+                    <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest px-4 mb-2">Manajemen Platform</p>
 
                     {/* Manajemen Reseller (Superadmin) */}
                     <NavGroup title="Reseller Hub (SaaS)" icon={Store} activePrefixes={['/admin/tenants']} currentPath={pathname}>

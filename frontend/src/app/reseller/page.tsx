@@ -199,7 +199,7 @@ export default function ResellerPage() {
                             <Loader2 style={{ width: 20, height: 20, animation: 'spin 1s linear infinite' }} /> Memuat paket terbaru...
                         </div>
                     ) : (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24, alignItems: 'end' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24, alignItems: 'stretch' }}>
                             {plans.map((plan, i) => {
                                 const name = plan.name?.toUpperCase();
                                 const isHighlight = name === 'LEGEND';
@@ -208,10 +208,20 @@ export default function ResellerPage() {
                                 const desc = plan.description || '';
                                 const bg = PLAN_HIGHLIGHTS[name] || '#0e0e24';
                                 const borderColor = isSupreme ? 'rgba(251,191,36,0.5)' : isHighlight ? 'rgba(96,165,250,0.5)' : 'rgba(255,255,255,0.07)';
-                                const priceMonthly = Math.round(Number(plan.price) || 0);
-                                const priceYearly = priceMonthly * 12;
-                                const originalPriceYearly = Number(plan.originalPrice) || priceYearly * 2;
-                                const features = Array.isArray(plan.features) ? plan.features : [];
+                                const price = Number(plan.price) || 0;
+                                const originalPrice = Number(plan.originalPrice) || (price * 1.5);
+                                const duration = plan.durationDays || 30;
+
+                                // Safe features parsing (Einstein-level robustness)
+                                const features = (() => {
+                                    if (Array.isArray(plan.features)) return plan.features;
+                                    try {
+                                        const parsed = JSON.parse(plan.features);
+                                        return Array.isArray(parsed) ? parsed : [String(plan.features)];
+                                    } catch (e) {
+                                        return plan.features ? [String(plan.features)] : [];
+                                    }
+                                })();
                                 return (
                                     <div key={plan.id || i} style={{
                                         position: 'relative',
@@ -231,13 +241,14 @@ export default function ResellerPage() {
                                         <p style={{ fontSize: 13, color: '#64748b', marginBottom: 20, lineHeight: 1.5 }}>{desc}</p>
                                         <div style={{ marginBottom: 8 }}>
                                             <span style={{ fontSize: 13, color: '#475569', textDecoration: 'line-through' }}>
-                                                Rp {Number(originalPriceYearly).toLocaleString('id-ID')} /tahun
+                                                Rp {Number(originalPrice).toLocaleString('id-ID')}
                                             </span>
                                         </div>
-                                        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, marginBottom: 4 }}>
-                                            <span style={{ fontSize: 38, fontWeight: 900, color: '#ffffff', lineHeight: 1 }}>Rp {priceYearly.toLocaleString('id-ID')}</span>
+                                        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, marginBottom: 4 }}>
+                                            <span style={{ fontSize: 38, fontWeight: 900, color: '#ffffff', lineHeight: 1 }}>Rp {price.toLocaleString('id-ID')}</span>
+                                            <span style={{ fontSize: 14, color: '#64748b', fontWeight: 600, paddingBottom: 4 }}>/ {duration} Hari</span>
                                         </div>
-                                        <p style={{ fontSize: 13, color: '#64748b', marginBottom: 24 }}>setara Rp {priceMonthly.toLocaleString('id-ID')} / bulan</p>
+                                        <p style={{ fontSize: 13, color: '#64748b', marginBottom: 24 }}>Sekali bayar, langsung jualan!</p>
                                         <div style={{ height: 1, background: 'rgba(255,255,255,0.07)', marginBottom: 20 }} />
                                         <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 24px', display: 'flex', flexDirection: 'column', gap: 10 }}>
                                             {features.map((f: string, fi: number) => {

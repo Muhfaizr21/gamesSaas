@@ -31,7 +31,7 @@ export default function SaaSPlansPage() {
         durationDays: 30,
         description: '',
         badge: '',
-        features: '',
+        features: [] as string[],
         isActive: true
     });
 
@@ -61,6 +61,15 @@ export default function SaaSPlansPage() {
 
     const handleOpenModal = (plan?: SaaSPlan) => {
         if (plan) {
+            let parsedFeatures: string[] = [];
+            if (plan.features) {
+                try {
+                    const parsed = JSON.parse(plan.features);
+                    parsedFeatures = Array.isArray(parsed) ? parsed : [String(plan.features)];
+                } catch (e) {
+                    parsedFeatures = [String(plan.features)];
+                }
+            }
             setFormData({
                 id: plan.id,
                 name: plan.name,
@@ -69,15 +78,7 @@ export default function SaaSPlansPage() {
                 durationDays: plan.durationDays,
                 description: plan.description || '',
                 badge: plan.badge || '',
-                features: (() => {
-                    if (!plan.features) return '';
-                    try {
-                        const parsed = JSON.parse(plan.features);
-                        return Array.isArray(parsed) ? parsed.join('\n') : String(plan.features);
-                    } catch (e) {
-                        return String(plan.features);
-                    }
-                })(),
+                features: parsedFeatures,
                 isActive: plan.isActive
             });
         } else {
@@ -89,7 +90,7 @@ export default function SaaSPlansPage() {
                 durationDays: 30,
                 description: '',
                 badge: '',
-                features: 'Storefront Publik\nDashboard Reseller',
+                features: ['Storefront Publik', 'Dashboard Reseller'],
                 isActive: true
             });
         }
@@ -101,7 +102,7 @@ export default function SaaSPlansPage() {
         setLoading(true);
         const payload = {
             ...formData,
-            features: JSON.stringify(formData.features.split('\n').filter(f => f.trim() !== ''))
+            features: JSON.stringify(formData.features.filter(f => f.trim() !== ''))
         };
 
         const url = formData.id ? `${API}/api/superadmin/plans/${formData.id}` : `${API}/api/superadmin/plans`;
@@ -282,8 +283,46 @@ export default function SaaSPlansPage() {
                                 <input type="text" value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} className="w-full bg-[#121212] border border-[#2a2a2a] rounded-xl py-2.5 px-4 focus:border-primary" />
                             </div>
                             <div>
-                                <label className="block text-sm font-semibold text-foreground/90 mb-1.5">Daftar Fitur (1 baris = 1 fitur)</label>
-                                <textarea rows={5} required value={formData.features} onChange={e => setFormData({ ...formData, features: e.target.value })} className="w-full bg-[#121212] border border-[#2a2a2a] rounded-xl py-2.5 px-4 focus:border-primary resize-none placeholder:text-zinc-600" placeholder={`Custom Domain\nInstant Withdraw\nDukungan Prioritas`} />
+                                <div className="flex justify-between items-center mb-1.5">
+                                    <label className="text-sm font-semibold text-foreground/90">Daftar Fitur Paket</label>
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, features: [...formData.features, ''] })}
+                                        className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-lg border border-primary/20 hover:bg-primary hover:text-black font-bold"
+                                    >
+                                        + Tambah Fitur
+                                    </button>
+                                </div>
+                                <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
+                                    {formData.features.map((feature, idx) => (
+                                        <div key={idx} className="flex gap-2">
+                                            <input
+                                                type="text"
+                                                value={feature}
+                                                placeholder="Contoh: Custom Domain"
+                                                onChange={e => {
+                                                    const newFeatures = [...formData.features];
+                                                    newFeatures[idx] = e.target.value;
+                                                    setFormData({ ...formData, features: newFeatures });
+                                                }}
+                                                className="flex-1 bg-[#121212] border border-[#2a2a2a] rounded-xl py-2 px-4 focus:border-primary text-sm"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const newFeatures = formData.features.filter((_, i) => i !== idx);
+                                                    setFormData({ ...formData, features: newFeatures });
+                                                }}
+                                                className="p-2 text-red-500 hover:bg-red-500/10 rounded-xl transition-colors"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                    {formData.features.length === 0 && (
+                                        <p className="text-xs text-center text-zinc-500 py-2">Belum ada fitur ditambahkan.</p>
+                                    )}
+                                </div>
                             </div>
 
                             <div className="flex gap-3 pt-4 border-t border-[#2a2a2a] mt-6">

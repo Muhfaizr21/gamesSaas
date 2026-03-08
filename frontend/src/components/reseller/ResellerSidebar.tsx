@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import {
     LayoutDashboard, Users, Gamepad2, ShoppingCart,
     Settings, LogOut, Tag, MessageSquare, Globe, Link as LinkIcon,
-    BarChart2, Wallet, ChevronDown, PackageSearch, Gift, Box, Store, Banknote, ListVideo
+    BarChart2, Wallet, ChevronDown, PackageSearch, Gift, Box, Store, Banknote, ListVideo, CreditCard
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useState, useEffect } from "react";
@@ -97,30 +97,41 @@ export function ResellerSidebar() {
                 <div className="space-y-2 px-2">
                     <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest px-4 mb-2">Manajemen Topup</p>
 
-                    <NavGroup title="Toko & Produk" icon={Store} activePrefixes={['/admin-reseller/produk', '/admin-reseller/kategori']} currentPath={pathname}>
-                        <NavItem href="/admin-reseller/produk" icon={PackageSearch} label="Margin & Harga Jual" currentPath={pathname} />
-                        <NavItem href="/admin-reseller/kategori" icon={Gamepad2} label="Kategori Game" currentPath={pathname} />
+                    <NavGroup title="Toko & Produk" icon={Store} activePrefixes={['/admin-reseller/produk', '/admin-reseller/kategori', '/admin-reseller/voucher']} currentPath={pathname}>
+                        <NavItem href="/admin-reseller/produk" icon={ShoppingCart} label="Produk & Harga" currentPath={pathname} />
+                        <NavItem href="/admin-reseller/kategori" icon={Box} label="Kategori Game" currentPath={pathname} />
+                        <NavItem href="/admin-reseller/voucher" icon={Gamepad2} label="Daftar Game" currentPath={pathname} />
                     </NavGroup>
 
-                    <NavGroup title="Transaksi" icon={ShoppingCart} activePrefixes={['/admin-reseller/pesanan']} currentPath={pathname}>
+                    <NavGroup title="Promosi & Diskon" icon={Gift} activePrefixes={['/admin-reseller/promo', '/admin-reseller/promo-code', '/admin-reseller/spin-prize']} currentPath={pathname}>
+                        <NavItem href="/admin-reseller/promo" icon={Tag} label="Flash Sale" currentPath={pathname} />
+                        <NavItem href="/admin-reseller/promo-code" icon={Tag} label="Kupon Diskon" currentPath={pathname} />
+                        <NavItem href="/admin-reseller/spin-prize" icon={Gift} label="Gacha (Spin)" currentPath={pathname} />
+                    </NavGroup>
+
+                    <NavGroup title="Transaksi" icon={Wallet} activePrefixes={['/admin-reseller/pesanan', '/admin-reseller/deposit-user', '/admin-reseller/keuangan']} currentPath={pathname}>
                         <NavItem href="/admin-reseller/pesanan" icon={ShoppingCart} label="Pesanan Pelanggan" currentPath={pathname} />
+                        <NavItem href="/admin-reseller/deposit-user" icon={CreditCard} label="M-Banking (User)" currentPath={pathname} />
+                        <NavItem href="/admin-reseller/keuangan" icon={BarChart2} label="Laporan Keuangan" currentPath={pathname} />
                     </NavGroup>
 
                     <div className="my-6 border-t border-white/5 mx-4" />
 
                     <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest px-4 mb-2">Keuangan & Sistem</p>
 
-                    <NavGroup title="Saldo API" icon={Wallet} activePrefixes={['/admin-reseller/deposit', '/admin-reseller/mutasi']} currentPath={pathname}>
-                        <NavItem href="/admin-reseller/deposit" icon={Banknote} label="Isi Saldo (Deposit)" currentPath={pathname} />
+                    <NavGroup title="Saldo API" icon={Banknote} activePrefixes={['/admin-reseller/deposit', '/admin-reseller/mutasi']} currentPath={pathname}>
+                        <NavItem href="/admin-reseller/deposit" icon={CreditCard} label="Topup Saldo Toko" currentPath={pathname} />
                         <NavItem href="/admin-reseller/mutasi" icon={BarChart2} label="Riwayat Saldo" currentPath={pathname} />
                     </NavGroup>
 
-                    <NavGroup title="Pengaturan Toko" icon={Settings} activePrefixes={['/admin-reseller/domain', '/admin-reseller/langganan', '/admin-reseller/pengaturan']} currentPath={pathname}>
+                    <NavGroup title="Pengaturan Toko" icon={Settings} activePrefixes={['/admin-reseller/domain', '/admin-reseller/langganan', '/admin-reseller/pengaturan', '/admin-reseller/users', '/admin-reseller/review', '/admin-reseller/rekening']} currentPath={pathname}>
+                        <NavItem href="/admin-reseller/users" icon={Users} label="User Terdaftar" currentPath={pathname} />
+                        <NavItem href="/admin-reseller/review" icon={MessageSquare} label="Ulasan Pelanggan" currentPath={pathname} />
+                        <NavItem href="/admin-reseller/rekening" icon={Banknote} label="Rekening Bank" currentPath={pathname} />
                         <NavItem href="/admin-reseller/domain" icon={Globe} label="Custom Domain" currentPath={pathname} />
-                        <NavItem href="/admin-reseller/langganan" icon={ListVideo} label="Paket Langganan SaaS" currentPath={pathname} />
+                        <NavItem href="/admin-reseller/langganan" icon={ListVideo} label="Paket Langganan" currentPath={pathname} />
                         <NavItem href="/admin-reseller/pengaturan" icon={Settings} label="Global Settings" currentPath={pathname} />
                     </NavGroup>
-
                 </div>
             </div>
 
